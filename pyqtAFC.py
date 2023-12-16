@@ -61,12 +61,11 @@ class AFCWorker(QRunnable):
 def afc_ls(service_provider: LockdownClient, root_item: QTreeWidgetItem, remote_file = '/', recursive = False):
 	""" perform a dirlist rooted at /var/mobile/Media """
 	sp = AfcService(lockdown=service_provider)
-	
 	afc_ls_proccess_dir(sp, root_item, remote_file, recursive, False)
 	
 def afc_ls_proccess_dir(sp: AfcService, root_item: QTreeWidgetItem, remote_file = '/', recursive = False, subDir = False):
 	for path in sp.dirlist(remote_file, -1 if recursive else 1):
-		print(path)
+#		print(path)
 		if(path != remote_file):
 			child1_item = QTreeWidgetItem(root_item, [path[len(remote_file) + (1 if subDir else 0):], str(human_readable_size(sp.stat(path)["st_size"])), str(sp.stat(path)["st_birthtime"])]) # 'Dir' if AfcService(lockdown=service_provider).isdir(path) else 'File'])
 			if sp.isdir(path):
@@ -83,6 +82,8 @@ class AFCTreeWidget(QTreeWidget):
 		# Create the context menu and add some actions
 		self.context_menu = QMenu(self)
 		actionShowInfos = self.context_menu.addAction("Show infos")
+		actionOpenFile = self.context_menu.addAction("Open File / Folder")
+		actionOpenFile.setEnabled(False)
 		actionCopyPath = self.context_menu.addAction("Copy Path to File/Folder")
 		self.context_menu.addSeparator()
 		actionPullFile = self.context_menu.addAction("Pull file")
@@ -92,7 +93,7 @@ class AFCTreeWidget(QTreeWidget):
 		actionCreateDir = self.context_menu.addAction("Create directory")
 		
 		actionCopyPath.triggered.connect(self.actionCopyPath_triggered)
-		self.parent_window = self.window()
+#		self.parent_window = self.window()
 		self.show()
 		
 	def itemSelectionChanged(self):
@@ -138,9 +139,8 @@ class AFCTreeWidget(QTreeWidget):
 					
 		pyperclip.copy(path_to_copy)
 		
-		if isinstance(self.parent_window, QMainWindow):
-			self.parent_window.updateStatusBar(f"Copied path: '{path_to_copy}' to clipboard ...")
-			
+		if isinstance(self.window(), QMainWindow):
+			self.window().updateStatusBar(f"Copied path: '{path_to_copy}' to clipboard ...")
 		pass
 		
 class TabAFC(QWidget):

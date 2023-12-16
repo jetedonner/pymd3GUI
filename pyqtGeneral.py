@@ -11,8 +11,16 @@ from PyQt6.QtCore import *
 
 from PyQt6.QtWidgets import *
 
+from BasicInfoTableWidget import *
+
 usbmux_address = None
 
+def lockdown_get(service_provider: LockdownClient, domain, key, color):
+	""" query lockdown values by their domain and key names """
+#	service_provider.get_value(domain=domain, key=key)
+	print_json(service_provider.get_value(domain=domain, key=key), colored=color)
+	print(service_provider.get_value(domain=domain, key=key))
+	
 def usbmux_list(usbmux_address: str, color: bool, usb: bool, network: bool) -> LockdownClient:
 #	print("BASIC INFOS - IONHEA")
 	""" list connected devices """
@@ -45,64 +53,103 @@ class TabGeneral(QWidget):
 		
 		self.setLayout(QVBoxLayout())
 #		print("BASIC INFOS")
-		self.BasicGP = QGroupBox("Basic Infos")
-		self.BasicGP.setLayout(QHBoxLayout())
+		self.gbSelection = QGroupBox("Selection")
+		self.gbSelection.setLayout(QHBoxLayout())
 		
-		self.layout().addWidget(self.BasicGP)
+		self.layMode = QVBoxLayout()
+		self.widMode = QWidget()
+		self.widMode.setLayout(self.layMode)
+		
+		self.layChannel = QVBoxLayout()
+		self.widChannel = QWidget()
+		self.widChannel.setLayout(self.layChannel)
+		
+		# Create two radio buttons
+		self.radioButton1 = QRadioButton("Basic")
+		self.radioButton2 = QRadioButton("Extended")
+	
+		# Create a button to clear the selection
+#		clearButton = QPushButton("Clear Selection")
+	
+		# Connect the radio buttons to a slot
+#		radioButton1.toggled.connect(self.radioButtonToggled)
+#		radioButton2.toggled.connect(self.radioButtonToggled)
+	
+		# Connect the clear button to a slot
+#		clearButton.clicked.connect(self.clearSelection)
+	
+		# Create a layout to arrange the radio buttons and the button
+#		layout = QVBoxLayout()
+		self.layMode.addWidget(self.radioButton1)
+		self.layMode.addWidget(self.radioButton2)
+		self.gbSelection.layout().addWidget(self.widMode)
+		
+		# Create a checkbox
+		self.chkUSB = QCheckBox("USB Devices")
+		self.chkNetwork = QCheckBox("Network Devices")
+		# Create a button to toggle the checkbox
+#		cmdRefresh = QPushButton("Refresh")
+	
+		# Connect the checkbox to a slot
+#		chkUSB.stateChanged.connect(self.checkboxToggled)
+		
+		self.layChannel.addWidget(self.chkUSB)
+		self.layChannel.addWidget(self.chkNetwork)
+		self.gbSelection.layout().addWidget(self.widChannel)
+		
+		# Create a button to resize the group box
+		self.resizeButton = QPushButton("Resize Group Box")
+	
+		# Connect the resize button to a slot
+		self.resizeButton.clicked.connect(self.resizeGroupBox)
+		self.gbSelection.layout().addWidget(self.resizeButton)
+			
+		self.gbBasic = QGroupBox("Basic Infos")
+		self.gbBasic.setLayout(QHBoxLayout())
+		
+		self.layout().addWidget(self.gbSelection)
+		self.layout().addWidget(self.gbBasic)
 		
 		self.lblBuildVersion = QLabel("BuildVersion:")
 		self.txtBuildVersion = QLineEdit()
 		self.txtBuildVersion.setReadOnly(True)
-		self.BasicGP.layout().addWidget(self.lblBuildVersion)
-		self.BasicGP.layout().addWidget(self.txtBuildVersion)
+#		self.gbBasic.layout().addWidget(self.lblBuildVersion)
+#		self.gbBasic.layout().addWidget(self.txtBuildVersion)
 		
 		
 		self.lblConnectionType = QLabel("ConnectionType:")
 		self.txtConnectionType = QLineEdit()
 		self.txtConnectionType.setReadOnly(True)
-		self.BasicGP.layout().addWidget(self.lblConnectionType)
-		self.BasicGP.layout().addWidget(self.txtConnectionType)
+#		self.gbBasic.layout().addWidget(self.lblConnectionType)
+#		self.gbBasic.layout().addWidget(self.txtConnectionType)
 		
+		self.tblBasicInfos = BasicInfoTableWidget(None)
+		self.gbBasic.layout().addWidget(self.tblBasicInfos)
 		
+		self.gbSelection.setMinimumHeight(0)
+		self.gbSelection.adjustSize()
+		
+		lockdownClient = usbmux_list(usbmux_address, True, True, False)
+#		self.tblBasicInfos.loadBasicInfoFromLockdownClient(lockdownClient)
+#		self.my_dict = {}
 #		devices = select_devices_by_connection_type(connection_type='USB', usbmux_address=usbmux_address)
 #		if len(devices) <= 1:
-		lockdownClient = usbmux_list(usbmux_address, True, True, False)
-		self.txtBuildVersion.setText(lockdownClient.short_info.get("BuildVersion"))
-		self.txtConnectionType.setText(lockdownClient.short_info.get("ConnectionType"))
-#		self.tree_widget = AFCTreeWidget()
-#		self.tree_widget.setHeaderLabels(['File/Folder', 'Size', 'Created'])
+#			for item in lockdownClient.all_values:
+#				print(item)
+#				try:
+##					print(lockdown_get(create_using_usbmux(usbmux_address=usbmux_address), "", item, True))
+#					self.my_dict.update({str(item): str(lockdown_get(create_using_usbmux(usbmux_address=usbmux_address), "", item, True))})
+#				except Exception as e:
+#					continue
+				
+		self.tblBasicInfos.loadBasicInfoFromLockdownClient(lockdownClient)
 		
-#		self.root_item = QTreeWidgetItem(self.tree_widget, ['/', '', '/var/mobile/Media'])
-		
-		# Expand the root item
-#		self.tree_widget.expandItem(self.root_item)
-#		self.tree_widget.header().resizeSection(0, 256)
-#		self.tree_widget.itemExpanded.connect(itemExpanded)
-		
-#		def contextMenuRequested(position):
-#			menu = QMenu(treeWidget)
-#			editAction = QAction('Edit', menu)
-#			deleteAction = QAction('Delete', menu)
-#			
-#			editAction.triggered.connect(lambda: print('Edit menu item clicked'))
-#			deleteAction.triggered.connect(lambda: print('Delete menu item clicked'))
-#			
-#			menu.addAction(editAction)
-#			menu.addAction(deleteAction)
-#			
-#			menu.popup(treeWidget.mapToGlobal(position))
-#			
-#			# Get the selected item model
-#			selected_model = treeWidget.model()  # Get the QAbstractItemModel instance
-#			
-#			# Get the selected item index
-#			selected_index = treeWidget.selectedIndexes()[0]  # Get the first selected index
-#			
-#			# Get the selected item
-#			selected_item = selected_model.itemFromIndex(selected_index)  # Get the item at the index
-#			
-#			# Do something with the selected item
-#			print(selected_item.text())
-			
-#		self.tree_widget.customContextMenuRequested.connect(contextMenuRequested)
-#		self.layout().addWidget(self.tree_widget)
+	def resizeGroupBox(self):
+		# Resize the group box to the space it needs
+		groupBox = self.gbSelection #self.findChild(QGroupBox)
+		groupBox.setMinimumHeight(0)
+#		groupBox.setSizePolicy(QSizePolicy., <#ver#>)# (self.window().width())
+		groupBox.adjustSize()
+		groupBox.sizePolicy().setHorizontalStretch(100)
+		self.gbBasic.sizePolicy().setVerticalPolicy(QSizePolicy.Policy.Maximum)
+#		self.gbBasic.adjustSize()
