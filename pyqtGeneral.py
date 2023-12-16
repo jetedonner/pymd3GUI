@@ -20,7 +20,7 @@ def lockdown_get(service_provider: LockdownClient, domain, key, color):
 #	service_provider.get_value(domain=domain, key=key)
 #	print_json(service_provider.get_value(domain=domain, key=key), colored=color)
 	retVal = service_provider.get_value(domain=domain, key=key)
-	print(retVal)
+#	print(retVal)
 	return retVal
 	
 	
@@ -148,7 +148,7 @@ class TabGeneral(QWidget):
 		self.tblBasicInfos.loadBasicInfoFromLockdownClient(self.lockdownClient)
 	
 	def optBasicToggled(self, state):
-		print(f'optBasicToggled: {state}')
+#		print(f'optBasicToggled: {state}')
 		if(state):
 			self.tblBasicInfos.loadBasicInfoFromLockdownClient(self.lockdownClient)
 		pass
@@ -160,14 +160,16 @@ class TabGeneral(QWidget):
 			devices = select_devices_by_connection_type(connection_type='USB', usbmux_address=usbmux_address)
 			if len(devices) <= 1:
 				LockdownClientExt = create_using_usbmux(usbmux_address=usbmux_address)
-				for item in LockdownClientExt.all_values:
-					print(item)
+				for item in LockdownClientExt.all_domains:
+#					print(item)
 #					item = item
 					try:
 						valForKey = str(lockdown_get(LockdownClientExt, "", item, True))
-						print(f'Key: {item} = {valForKey}')
+#						print(f'Key: {item} = {valForKey}')
 						self.my_dict.update({str(item): valForKey})
 					except Exception as e:
+						print(item)
+						self.my_dict.update({str(item): "<Error>"})
 						continue
 				self.tblBasicInfos.loadExtendedInfoFromLockdownClient(self.my_dict)
 		pass

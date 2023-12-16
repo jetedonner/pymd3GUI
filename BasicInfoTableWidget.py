@@ -12,7 +12,7 @@ class SelectableTextDelegate(QStyledItemDelegate):
 	def createEditor(self, parent, option, index):
 		editor = QLineEdit(parent)
 		editor.setReadOnly(True)  # Make the editor read-only
-		print("LOADING EXT IBNFOS A")
+#		print("LOADING EXT IBNFOS A")
 		editor.setAlignment(Qt.AlignLeft | Qt.AlignLeft)
 		return editor
 	
@@ -62,6 +62,6 @@ class BasicInfoTableWidget(QWidget):
 		self.table_view.setModel(self.model)
 		
 	def loadExtendedInfoFromLockdownClient(self, data:dict):
-		print("LOADING EXT IBNFOS A")
+#		print("LOADING EXT IBNFOS A")
 		self.modelExt = ExtendedInfoTableModel(data)
 		self.table_view.setModel(self.modelExt)
