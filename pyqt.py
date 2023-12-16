@@ -32,6 +32,7 @@ from pyqtGeneral import *
 from pyqtAFC import *
 from pyqtDiagnostics import *
 from pyqtSysLog import *
+from pyqtTunnel import *
 
 ERROR_MSG = "ERROR"
 WINDOW_SIZE = 620
@@ -61,7 +62,10 @@ class Pymobiledevice3GUIWindow(QMainWindow):
         super().__init__()
         self.setWindowTitle("pymd3GUI - GUI for pymobiledevice3")
         self.setFixedSize(WINDOW_SIZE * 2, WINDOW_SIZE)
-
+        
+#       self.showEvent(<#a0#>) .connect(self, Qt.SIGNAL('showEvent(QShowEvent*)'), self.onWindowShown)
+#       self.connect(self, Qt.SIGNAL('loadFinished(bool)'), self.onLoadFinished)
+        
          # Create the menu bar
 #       menubar = QMenuBar(self)
 #       # self.setMenuBar(menubar)
@@ -112,6 +116,9 @@ class Pymobiledevice3GUIWindow(QMainWindow):
         self.tabSysLog = TabSysLog()
         self.tabWidget.addTab(self.tabSysLog, "SysLog")
         
+        self.tabTunnel = TabTunnel()
+        self.tabWidget.addTab(self.tabTunnel, "Tunnel")
+        
         self.topLayout.addWidget(self.combobox)
 
         self.topWidget = QWidget(self)
@@ -142,6 +149,39 @@ class Pymobiledevice3GUIWindow(QMainWindow):
         
         self.updateStatusBar("Ready...")
 
+    
+    
+    def showEvent(self, event):
+        print('in showEvent')
+        # Set image on QGraphicsView here, or something else that has to be done in showEvent
+        
+        # Which of these is correct ??
+#       super(MainForm, self).showEvent(event)
+        super().showEvent(event)
+        self.tabGeneral.resizeGroupBox()
+        self.update()
+        
+    def loadFinished(self, successful):
+        print('in loadFinished')
+        # Set image on QGraphicsView here, or something else that has to be done in showEvent
+        
+        # Which of these is correct ??
+#       super(MainForm, self).showEvent(event)
+        super().loadFinished(successful)
+    # Set the window title
+#   self.setWindowTitle("Window Loading Example")
+    
+    def onWindowShown(self, event):
+        # Perform some action when the window is shown
+        print("Window has been shown")
+        
+    def onLoadFinished(self, successful):
+        # Perform some action when the window has finished loading
+        if successful:
+            print("Window has finished loading")
+        else:
+            print("Window failed to load")
+        
     def start_worker(self):
         worker = SysLogWorker(self.sysLog_receiver)
         worker.signals.finished.connect(self.handle_finished)
@@ -196,6 +236,7 @@ def main():
 
     pymobiledevice3GUIWindow = Pymobiledevice3GUIWindow()
     pymobiledevice3GUIWindow.show()
+#   pymobiledevice3GUIWindow.tabGeneral.resizeGroupBox()
     PyMobiledevice3GUI(view=pymobiledevice3GUIWindow)
 
     sys.exit(pymobiledevice3GUIApp.exec())

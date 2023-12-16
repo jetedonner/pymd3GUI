@@ -158,33 +158,7 @@ class TabAFC(QWidget):
 		self.tree_widget.expandItem(self.root_item)
 		self.tree_widget.header().resizeSection(0, 256)
 #		self.tree_widget.itemExpanded.connect(itemExpanded)
-		
-		def contextMenuRequested(position):
-			menu = QMenu(treeWidget)
-			editAction = QAction('Edit', menu)
-			deleteAction = QAction('Delete', menu)
-			
-			editAction.triggered.connect(lambda: print('Edit menu item clicked'))
-			deleteAction.triggered.connect(lambda: print('Delete menu item clicked'))
-			
-			menu.addAction(editAction)
-			menu.addAction(deleteAction)
-			
-			menu.popup(treeWidget.mapToGlobal(position))
-			
-			# Get the selected item model
-			selected_model = treeWidget.model()  # Get the QAbstractItemModel instance
-			
-			# Get the selected item index
-			selected_index = treeWidget.selectedIndexes()[0]  # Get the first selected index
-			
-			# Get the selected item
-			selected_item = selected_model.itemFromIndex(selected_index)  # Get the item at the index
-			
-			# Do something with the selected item
-			print(selected_item.text())
-			
-		self.tree_widget.customContextMenuRequested.connect(contextMenuRequested)
+
 		self.layout().addWidget(self.tree_widget)
 		
 			

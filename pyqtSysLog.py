@@ -100,21 +100,39 @@ class TabSysLog(QWidget):
 		
 		validator = QIntValidator(-1, 1000000)
 		
+		self.gbFilter = QGroupBox("Filter")
+		self.gbFilter.setLayout(QVBoxLayout())
+		
 		self.lblPidFiler = QLabel("PID Filter (-1 = No Filter):")
 		self.txtPidFilter = QLineEdit("-1")
 		self.txtPidFilter.setValidator(validator)
 		
 		self.textLog = LogginOutput(parent)
 		self.setLayout(QVBoxLayout())
-		self.layout().addWidget(self.lblPidFiler)
-		self.layout().addWidget(self.txtPidFilter)
-		self.layout().addWidget(self.textLog)
+		self.gbFilter.layout().addWidget(self.lblPidFiler)
+		self.gbFilter.layout().addWidget(self.txtPidFilter)
+		self.layout().addWidget(self.gbFilter)
+		
+		self.gbLog = QGroupBox("SysLog")
+		self.gbLog.setLayout(QVBoxLayout())
+		
+#		self.layout().addWidget(self.textLog)
+		self.gbLog.layout().addWidget(self.textLog)
+		
+		
+		self.layCtrl = QHBoxLayout()
+		self.widCtrl = QWidget()
+		self.widCtrl.setLayout(self.layCtrl)
 		
 		self.sysLogActive = QCheckBox("SysLog active")
 		self.sysLogActive.stateChanged.connect(self.sysLogActive_changed)
-		self.layout().addWidget(self.sysLogActive)
+		self.layCtrl.addWidget(self.sysLogActive)
 		
 		self.autoScroll = QCheckBox("Autoscroll")
 		self.autoScroll.setChecked(True)
 		self.autoScroll.stateChanged.connect(self.sysLogAutoScroll_changed)
-		self.layout().addWidget(self.autoScroll)
+		self.layCtrl.addWidget(self.autoScroll)
+#		self.layout().addWidget(self.widCtrl)
+		self.gbLog.layout().addWidget(self.widCtrl)
+		self.layout().addWidget(self.gbLog)
+		self.widCtrl.adjustSize()

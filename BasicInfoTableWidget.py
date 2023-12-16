@@ -6,12 +6,14 @@ from PyQt6.QtCore import Qt, QEvent
 from PyQt6.QtGui import QMouseEvent
 from PyQt6.QtWidgets import (QHBoxLayout, QHeaderView, QSizePolicy, QTableView, QWidget, QStyledItemDelegate)
 from BasicInfoTableModel import BasicInfoTableModel
+from ExtendedInfoTableModel import ExtendedInfoTableModel
 
 class SelectableTextDelegate(QStyledItemDelegate):
 	def createEditor(self, parent, option, index):
 		editor = QLineEdit(parent)
 		editor.setReadOnly(True)  # Make the editor read-only
-		editor.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
+		print("LOADING EXT IBNFOS A")
+		editor.setAlignment(Qt.AlignLeft | Qt.AlignLeft)
 		return editor
 	
 	def setEditorData(self, editor, index):
@@ -24,6 +26,7 @@ class BasicInfoTableWidget(QWidget):
 		
 		# Getting the Model
 		self.model = BasicInfoTableModel(data)
+		self.modelExt = None
 		
 		# Creating a QTableView
 		self.table_view = QTableView()
@@ -57,3 +60,8 @@ class BasicInfoTableWidget(QWidget):
 	def loadBasicInfoFromLockdownClient(self, lockdownClient:LockdownClient):
 		self.model = BasicInfoTableModel(lockdownClient)
 		self.table_view.setModel(self.model)
+		
+	def loadExtendedInfoFromLockdownClient(self, data:dict):
+		print("LOADING EXT IBNFOS A")
+		self.modelExt = ExtendedInfoTableModel(data)
+		self.table_view.setModel(self.modelExt)

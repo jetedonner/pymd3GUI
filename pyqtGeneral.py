@@ -18,8 +18,11 @@ usbmux_address = None
 def lockdown_get(service_provider: LockdownClient, domain, key, color):
 	""" query lockdown values by their domain and key names """
 #	service_provider.get_value(domain=domain, key=key)
-	print_json(service_provider.get_value(domain=domain, key=key), colored=color)
-	print(service_provider.get_value(domain=domain, key=key))
+#	print_json(service_provider.get_value(domain=domain, key=key), colored=color)
+	retVal = service_provider.get_value(domain=domain, key=key)
+	print(retVal)
+	return retVal
+	
 	
 def usbmux_list(usbmux_address: str, color: bool, usb: bool, network: bool) -> LockdownClient:
 #	print("BASIC INFOS - IONHEA")
@@ -38,9 +41,6 @@ def usbmux_list(usbmux_address: str, color: bool, usb: bool, network: bool) -> L
 		lockdown = create_using_usbmux(udid, autopair=False, connection_type=device.connection_type,
 										usbmux_address=usbmux_address)
 		connected_devices.append(lockdown.short_info)
-		print(lockdown)
-		
-		print(lockdown.short_info.get("BuildVersion"))
 		return lockdown
 	return None
 		
@@ -55,6 +55,7 @@ class TabGeneral(QWidget):
 #		print("BASIC INFOS")
 		self.gbSelection = QGroupBox("Selection")
 		self.gbSelection.setLayout(QHBoxLayout())
+		self.gbSelection.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
 		
 		self.layMode = QVBoxLayout()
 		self.widMode = QWidget()
@@ -65,23 +66,24 @@ class TabGeneral(QWidget):
 		self.widChannel.setLayout(self.layChannel)
 		
 		# Create two radio buttons
-		self.radioButton1 = QRadioButton("Basic")
-		self.radioButton2 = QRadioButton("Extended")
+		self.optBasic = QRadioButton("Basic")
+		self.optBasic.setChecked(True)
+		self.optExt = QRadioButton("Extended")
 	
 		# Create a button to clear the selection
 #		clearButton = QPushButton("Clear Selection")
 	
 		# Connect the radio buttons to a slot
-#		radioButton1.toggled.connect(self.radioButtonToggled)
-#		radioButton2.toggled.connect(self.radioButtonToggled)
+		self.optBasic.toggled.connect(self.optBasicToggled)
+		self.optExt.toggled.connect(self.optExtToggled)
 	
 		# Connect the clear button to a slot
 #		clearButton.clicked.connect(self.clearSelection)
 	
 		# Create a layout to arrange the radio buttons and the button
 #		layout = QVBoxLayout()
-		self.layMode.addWidget(self.radioButton1)
-		self.layMode.addWidget(self.radioButton2)
+		self.layMode.addWidget(self.optBasic)
+		self.layMode.addWidget(self.optExt)
 		self.gbSelection.layout().addWidget(self.widMode)
 		
 		# Create a checkbox
@@ -106,6 +108,7 @@ class TabGeneral(QWidget):
 			
 		self.gbBasic = QGroupBox("Basic Infos")
 		self.gbBasic.setLayout(QHBoxLayout())
+		self.gbBasic.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
 		
 		self.layout().addWidget(self.gbSelection)
 		self.layout().addWidget(self.gbBasic)
@@ -129,27 +132,75 @@ class TabGeneral(QWidget):
 		self.gbSelection.setMinimumHeight(0)
 		self.gbSelection.adjustSize()
 		
-		lockdownClient = usbmux_list(usbmux_address, True, True, False)
+		self.lockdownClient = usbmux_list(usbmux_address, True, True, False)
 #		self.tblBasicInfos.loadBasicInfoFromLockdownClient(lockdownClient)
-#		self.my_dict = {}
+		self.my_dict = {}
 #		devices = select_devices_by_connection_type(connection_type='USB', usbmux_address=usbmux_address)
 #		if len(devices) <= 1:
-#			for item in lockdownClient.all_values:
+#			for item in create_using_usbmux(usbmux_address=usbmux_address).all_values:
 #				print(item)
 #				try:
-##					print(lockdown_get(create_using_usbmux(usbmux_address=usbmux_address), "", item, True))
-#					self.my_dict.update({str(item): str(lockdown_get(create_using_usbmux(usbmux_address=usbmux_address), "", item, True))})
+#					print(lockdown_get(create_using_usbmux(usbmux_address=usbmux_address), "", item, True))
+##					self.my_dict.update({str(item): str(lockdown_get(create_using_usbmux(usbmux_address=usbmux_address), "", item, True))})
 #				except Exception as e:
 #					continue
 				
-		self.tblBasicInfos.loadBasicInfoFromLockdownClient(lockdownClient)
+		self.tblBasicInfos.loadBasicInfoFromLockdownClient(self.lockdownClient)
+	
+	def optBasicToggled(self, state):
+		print(f'optBasicToggled: {state}')
+		if(state):
+			self.tblBasicInfos.loadBasicInfoFromLockdownClient(self.lockdownClient)
+		pass
 		
+	def optExtToggled(self, state):
+#		print(f'optExtToggled: {state}')
+		if(state):
+#			print("LOADING EXT IBNFOS 1")
+			devices = select_devices_by_connection_type(connection_type='USB', usbmux_address=usbmux_address)
+			if len(devices) <= 1:
+				LockdownClientExt = create_using_usbmux(usbmux_address=usbmux_address)
+				for item in LockdownClientExt.all_values:
+					print(item)
+#					item = item
+					try:
+						valForKey = str(lockdown_get(LockdownClientExt, "", item, True))
+						print(f'Key: {item} = {valForKey}')
+						self.my_dict.update({str(item): valForKey})
+					except Exception as e:
+						continue
+				self.tblBasicInfos.loadExtendedInfoFromLockdownClient(self.my_dict)
+		pass
+
+
 	def resizeGroupBox(self):
-		# Resize the group box to the space it needs
-		groupBox = self.gbSelection #self.findChild(QGroupBox)
-		groupBox.setMinimumHeight(0)
-#		groupBox.setSizePolicy(QSizePolicy., <#ver#>)# (self.window().width())
-		groupBox.adjustSize()
-		groupBox.sizePolicy().setHorizontalStretch(100)
-		self.gbBasic.sizePolicy().setVerticalPolicy(QSizePolicy.Policy.Maximum)
-#		self.gbBasic.adjustSize()
+#		self.gbSelection.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
+#		self.gbBasic.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
+		
+		# Resize the first group box to the space it needs
+#		groupBox1 = self.findChild(QGroupBox, "Group Box 1")
+		oldHeight = self.gbSelection.height()
+		print(oldHeight)
+		self.gbSelection.setMinimumHeight(0)
+		self.gbSelection.resize(self.gbSelection.width(), self.gbSelection.sizeHint().height())
+		newHeight = self.gbSelection.sizeHint().height()
+		print(newHeight)
+#		self.gbSelection.adjustSize()
+	
+		# Resize the second group box to fill the remaining space
+#		groupBox2 = self.findChild(QGroupBox, "Group Box 2")
+		print(self.gbBasic.height())
+		self.gbBasic.setMinimumHeight(0)
+		self.gbBasic.resize(self.gbBasic.width(), self.gbBasic.sizeHint().height() + (oldHeight - newHeight))
+		
+		self.gbBasic.move(self.gbBasic.x(), self.gbBasic.y() - (oldHeight - newHeight))
+		
+		print(self.gbBasic.sizeHint().height())
+#		# Resize the group box to the space it needs
+#		groupBox = self.gbSelection #self.findChild(QGroupBox)
+#		groupBox.setMinimumHeight(0)
+##		groupBox.setSizePolicy(QSizePolicy., <#ver#>)# (self.window().width())
+#		groupBox.adjustSize()
+#		groupBox.sizePolicy().setHorizontalStretch(100)
+#		self.gbBasic.sizePolicy().setVerticalPolicy(QSizePolicy.Policy.Maximum)
+##		self.gbBasic.adjustSize()
