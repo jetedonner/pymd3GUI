@@ -153,6 +153,7 @@ class TabDiagnostics(QWidget):
 		self.InfoGP.layout().addWidget(self.hInfoButtonsWidget)
 		
 		self.textInfos = QTextEdit()
+		self.textInfos.setReadOnly(True)
 		self.InfoGP.layout().addWidget(self.textInfos)
 		
 		self.layout().addWidget(self.InfoGP)

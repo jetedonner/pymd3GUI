@@ -38,8 +38,10 @@ class AFCWorker(QRunnable):
 	def runAFCLs(self):
 #		self.isSysLogActive = True
 		devices = select_devices_by_connection_type(connection_type='USB', usbmux_address=usbmux_address)
+#		print(f"usbmux_address: {usbmux_address}")
 		if len(devices) <= 1:
 			afc_ls(create_using_usbmux(usbmux_address=usbmux_address), self.root_item)
+#			print(f"usbmux_address: {usbmux_address}")
 #			for syslog_entry in OsTraceService(lockdown=create_using_usbmux(usbmux_address=usbmux_address)).syslog(pid=-1):
 ##				print(syslog_entry.timestamp)
 #				self.signals.sendSysLog.emit(str(syslog_entry.timestamp), "green")
@@ -70,9 +72,9 @@ def afc_ls_proccess_dir(sp: AfcService, root_item: QTreeWidgetItem, remote_file 
 			if sp.isdir(path):
 				afc_ls_proccess_dir(sp, child1_item, path, recursive, True)
 
-def itemExpanded(item):
-	if item.parent() != None:
-		print(f"Item {item.text(0)} / {item.parent().text(0)} expanded")
+#def itemExpanded(item):
+#	if item.parent() != None:
+#		print(f"Item {item.text(0)} / {item.parent().text(0)} expanded")
 		
 class AFCTreeWidget(QTreeWidget):
 	def __init__(self):
@@ -135,9 +137,8 @@ class AFCTreeWidget(QTreeWidget):
 					path_to_copy = "/" + current_item.text(0) + path_to_copy
 					
 		pyperclip.copy(path_to_copy)
-#		parent_window = self.window()
 		
-		if isinstance(parent_window, QMainWindow):
+		if isinstance(self.parent_window, QMainWindow):
 			self.parent_window.updateStatusBar(f"Copied path: '{path_to_copy}' to clipboard ...")
 			
 		pass
@@ -156,7 +157,7 @@ class TabAFC(QWidget):
 		# Expand the root item
 		self.tree_widget.expandItem(self.root_item)
 		self.tree_widget.header().resizeSection(0, 256)
-		self.tree_widget.itemExpanded.connect(itemExpanded)
+#		self.tree_widget.itemExpanded.connect(itemExpanded)
 		
 		def contextMenuRequested(position):
 			menu = QMenu(treeWidget)
@@ -184,17 +185,6 @@ class TabAFC(QWidget):
 			print(selected_item.text())
 			
 		self.tree_widget.customContextMenuRequested.connect(contextMenuRequested)
-		# Display the tree widget
-		# tree.show()
 		self.layout().addWidget(self.tree_widget)
 		
-#		self.window().window().start_workerAFC()
-#		self.parent_window.start_workerAFC()
-		# Specify the device UDID (Unique Device Identifier)
-		# device_udid = '00008110-001241591460201E'
-		
-#		self.usbmux_address = None
-#		devices = select_devices_by_connection_type(connection_type='USB', usbmux_address=self.usbmux_address)
-#		if len(devices) <= 1:
-#			afc_ls(create_using_usbmux(usbmux_address=self.usbmux_address), root_item)
 			

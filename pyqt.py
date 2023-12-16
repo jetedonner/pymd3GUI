@@ -28,6 +28,7 @@ from PyQt6.QtCore import *
 
 from PyQt6.QtWidgets import *
 
+from pyqtGeneral import *
 from pyqtAFC import *
 from pyqtDiagnostics import *
 from pyqtSysLog import *
@@ -58,7 +59,7 @@ class Pymobiledevice3GUIWindow(QMainWindow):
 
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("pymobiledevice3 - GUI")
+        self.setWindowTitle("pymd3GUI - GUI for pymobiledevice3")
         self.setFixedSize(WINDOW_SIZE * 2, WINDOW_SIZE)
 
          # Create the menu bar
@@ -99,6 +100,9 @@ class Pymobiledevice3GUIWindow(QMainWindow):
         self.generalLayout = QVBoxLayout()
         self.buttonMap = QPushButton("TeSet")
         
+        self.tabGeneral = TabGeneral()
+        self.tabWidget.addTab(self.tabGeneral, "General")
+        
         self.tabDiagnostics = TabDiagnostics()
         self.tabWidget.addTab(self.tabDiagnostics, "Diagnostics")
 
@@ -133,7 +137,9 @@ class Pymobiledevice3GUIWindow(QMainWindow):
         self.afc_receiver = AFCReceiver()
 
         self.threadpool = QThreadPool()
-
+        
+        self.start_workerAFC()
+        
         self.updateStatusBar("Ready...")
 
     def start_worker(self):
