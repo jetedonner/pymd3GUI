@@ -257,11 +257,8 @@ class Pymobiledevice3GUIWindow(QMainWindow):
         print("Worker finished")
         
     def handle_finishedGeneral(self, my_dict):
-#       print("Worker finished General")
         self.tabGeneral.tblBasicInfos.loadExtendedInfoFromLockdownClient(my_dict)
         self.handle_progressFinished()
-        
-        
         
     def handle_sendSysLog(self, text, color):
         self.tabSysLog.textLog.append(text, color)
