@@ -18,6 +18,7 @@ class FileContentDialog(QDialog):
 		# Set the window title to "Enter Sudo Password"
 		self.setWindowTitle(f"{promtTitle}")
 		self.setSizeGripEnabled(True)
+		self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
 		# Create a label to display the instructions
 		instructionsLabel = QLabel(f"{promtMsg}")
 #		instructionsLabel.setAlignment(Qt.AlignCenter)
@@ -41,11 +42,13 @@ class FileContentDialog(QDialog):
 #		txtInput.setEchoMode(QLineEdit.EchoMode.Password)
 		
 		# Create a button to confirm the password
-		confirmButton = QPushButton("Save")
-		confirmButton.clicked.connect(self.confirmInput)
+		self.confirmButton = QPushButton("Save")
+		self.confirmButton.clicked.connect(self.confirmInput)
+		self.confirmButton.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Maximum)
 		
-		cancelButton = QPushButton("Close")
-		cancelButton.clicked.connect(self.cancelAction)
+		self.cancelButton = QPushButton("Close")
+		self.cancelButton.clicked.connect(self.cancelAction)
+		self.cancelButton.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Maximum)
 		
 		self.showHex = QCheckBox("HEX View")
 		self.showHex.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Maximum)
@@ -75,9 +78,12 @@ class FileContentDialog(QDialog):
 		
 		
 		layoutTop.addWidget(instructionsLabel)
-		layoutTop.addWidget(self.showHex)
+		
 		layoutTop.addWidget(encodingLabel)
 		layoutTop.addWidget(self.cmbEncoding)
+		
+		layoutTop.addWidget(self.showHex)
+		
 		layout = QVBoxLayout()
 		layout.addWidget(widTop)
 		self.splitter.addWidget(self.txtMultiline)
@@ -87,8 +93,14 @@ class FileContentDialog(QDialog):
 		widButtons = QWidget()
 		widButtons.setLayout(layButtons)
 		
-		layButtons.addWidget(confirmButton)
-		layButtons.addWidget(cancelButton)
+		layButtons.addStretch()
+		
+		# Add the buttons to the layout
+		layButtons.addWidget(self.confirmButton, Qt.AlignmentFlag.AlignRight)
+		layButtons.addWidget(self.cancelButton, Qt.AlignmentFlag.AlignRight)
+		
+		layButtons.addWidget(self.confirmButton)
+		layButtons.addWidget(self.cancelButton)
 		
 		layout.addWidget(widButtons)
 		
@@ -96,7 +108,7 @@ class FileContentDialog(QDialog):
 		self.setLayout(layout)
 		
 		# Set the size of the dialog
-		self.setFixedSize(720, 512)
+		self.setMinimumSize(720, 512)
 		self.setEnabled(True)
 		# Show the dialog
 #		self.show()

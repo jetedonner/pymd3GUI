@@ -36,17 +36,17 @@ from pyqtSysLog import *
 from pyqtTunnel import *
 
 from helper import *
-#from helper import pyqtDialog
 
-ERROR_MSG = "ERROR"
+#ERROR_MSG = "ERROR"
 WINDOW_SIZE = 620
-DISPLAY_HEIGHT = 35
-BUTTON_SIZE = 40
+#DISPLAY_HEIGHT = 35
+#BUTTON_SIZE = 40
 
-AFCMAGIC = b'CFA6LPAA'
+#AFCMAGIC = b'CFA6LPAA'
 
 usbmux_address = None
 
+pymobiledevice3GUIApp = None
 pymobiledevice3GUIWindow = None
 
 def create_mux(usbmux_address: Optional[str] = None) -> usbmux.MuxConnection:
@@ -162,7 +162,8 @@ class Pymobiledevice3GUIWindow(QMainWindow):
 
         self.sysLog_receiver = SysLogReceiver()
         self.afc_receiver = AFCReceiver()
-
+        self.general_receiver = GeneralReceiver()
+        
         self.threadpool = QThreadPool()
         
         self.start_workerAFC()
@@ -225,6 +226,14 @@ class Pymobiledevice3GUIWindow(QMainWindow):
         self.threadpool.start(workerAFC)
         
         QCoreApplication.processEvents()
+        
+    def start_workerGeneral(self, lockdownClientExt):
+        workerGeneral = GeneralWorker(self.general_receiver, lockdownClientExt)
+        workerGeneral.signals.sendProgressUpdate.connect(self.handle_progressUpdate)
+        workerGeneral.signals.finished.connect(self.handle_finishedGeneral)
+        self.threadpool.start(workerGeneral)
+        
+        QCoreApplication.processEvents()
 
     def handle_result(self, result):
         print(f"Received result in the main thread: {result}")
@@ -247,6 +256,13 @@ class Pymobiledevice3GUIWindow(QMainWindow):
     def handle_finished(self):
         print("Worker finished")
         
+    def handle_finishedGeneral(self, my_dict):
+#       print("Worker finished General")
+        self.tabGeneral.tblBasicInfos.loadExtendedInfoFromLockdownClient(my_dict)
+        self.handle_progressFinished()
+        
+        
+        
     def handle_sendSysLog(self, text, color):
         self.tabSysLog.textLog.append(text, color)
 
@@ -262,10 +278,16 @@ class PyMobiledevice3GUI:
         # self._evaluate = model
         self._view = view
 
+def close_application():
+    # Stop all running tasks in the thread pool
+    global pymobiledevice3GUIApp
+    pymobiledevice3GUIApp.quit()
+
 def main():
     """PyMobiledevice3GUI's main function."""
+    global pymobiledevice3GUIApp
     pymobiledevice3GUIApp = QApplication([])
-
+    pymobiledevice3GUIApp.aboutToQuit.connect(close_application)
     # Load the icon file
     icon_path = os.path.join('resources', 'app_icon.png')
     icon = QPixmap(icon_path)

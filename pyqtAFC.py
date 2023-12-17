@@ -230,7 +230,7 @@ class AFCTreeWidget(QTreeWidget):
 					
 					self.window().updateStatusBar(f"Opening file '{first_selected_item.text(0)}' ...")
 #					self.window().mlDialog = MultilineTextDialog("File content", f"Content of file '{first_selected_item.text(0)}'", file_content, path_to_open, self.saveFileContentCallback)
-					self.window().fileContentDialog = FileContentDialog("File content", f"Content of file '{first_selected_item.text(0)}'", fileBytes, path_to_open, self.saveFileContentCallback)
+					self.window().fileContentDialog = FileContentDialog(first_selected_item.text(0), f"Content of file '{first_selected_item.text(0)}'", fileBytes, path_to_open, self.saveFileContentCallback)
 					
 					self.window().fileContentDialog.setModal(True)
 					self.window().fileContentDialog.show()

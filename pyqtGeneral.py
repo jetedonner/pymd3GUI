@@ -15,6 +15,78 @@ from BasicInfoTableWidget import *
 
 usbmux_address = None
 
+class GeneralReceiver(QObject):
+	pass
+#	data_received = pyqtSignal(str)
+#	interruptSysLog = pyqtSignal()
+	
+class GeneralWorkerSignals(QObject):
+	finished = pyqtSignal(dict)
+	sendProgressUpdate = pyqtSignal(int)
+	
+class GeneralWorker(QRunnable):
+	def __init__(self, data_receiver, LockdownClientExt):
+		super(GeneralWorker, self).__init__()
+#		self.isAFCActive = False
+		self.my_dict = {}
+		self.lockdownClientExt = LockdownClientExt
+#		self.root_item = root_item
+		self.data_receiver = data_receiver
+		self.signals = GeneralWorkerSignals()
+		
+	def run(self):
+		QCoreApplication.processEvents()	
+		self.runGeneral()
+		
+	def runGeneral(self):
+#		QCoreApplication.processEvents()
+#		if self.isAFCActive:
+#			interruptFCActive = True
+#			return
+#		else:
+#			interruptFCActive = False
+#		QCoreApplication.processEvents()	
+#		self.isAFCActive = True
+#		devices = select_devices_by_connection_type(connection_type='USB', usbmux_address=usbmux_address)
+#		if len(devices) <= 1:
+#			afc_ls(create_using_usbmux(usbmux_address=usbmux_address), self.root_item, "/", False, self.signals.sendProgressUpdate)
+#		devices = select_devices_by_connection_type(connection_type='USB', usbmux_address=usbmux_address)
+#		if len(devices) <= 1:
+#			self.window().updateStatusBar("Loading extended device infos ...")
+#			LockdownClientExt = create_using_usbmux(usbmux_address=usbmux_address)
+		itemsCount = len(self.lockdownClientExt.all_domains)
+		idx = 0
+		for item in self.lockdownClientExt.all_domains:
+			idx += 1
+			newPrgVal = int(idx/itemsCount*100)
+			self.signals.sendProgressUpdate.emit(int(newPrgVal))
+			QCoreApplication.processEvents()
+			try:
+				valForKey = str(lockdown_get(self.lockdownClientExt, "", item, True))
+#						print(f'Key: {item} = {valForKey}')
+				self.my_dict.update({str(item): valForKey})
+			except Exception as e:
+				self.my_dict.update({str(item): "<Error>"})
+				continue
+				
+#			self.tblBasicInfos.loadExtendedInfoFromLockdownClient(self.my_dict)
+#			newPrgVal = int(idx/itemsCount*100)
+#			self.window().updateProgress(newPrgVal)
+				
+	#		print(f"idx: {idx}, root_item.childCount(): {childCountCurr}, childCountOrig: {childCountOrig}, newPrgVal: {newPrgVal}")
+#				root_item.removeChild(root_item.child(0))
+#				sendProgressUpdate.emit(int(newPrgVal))
+#				QCoreApplication.processEvents()	
+#		self.isAFCActive = False
+#		QCoreApplication.processEvents()
+		self.signals.finished.emit(self.my_dict)
+		
+		
+	def handle_interrupGeneral(self):
+#		print(f"Received interrupt in the sysLog worker thread")
+#		self.isSysLogActive = False
+		pass
+
 def lockdown_get(service_provider: LockdownClient, domain, key, color):
 	""" query lockdown values by their domain and key names """
 #	service_provider.get_value(domain=domain, key=key)
@@ -152,17 +224,31 @@ class TabGeneral(QWidget):
 			self.my_dict = {}
 			devices = select_devices_by_connection_type(connection_type='USB', usbmux_address=usbmux_address)
 			if len(devices) <= 1:
-				self.window().updateStatusBar("Loading extended device infos ...")
 				LockdownClientExt = create_using_usbmux(usbmux_address=usbmux_address)
-				for item in LockdownClientExt.all_domains:
-					try:
-						valForKey = str(lockdown_get(LockdownClientExt, "", item, True))
-#						print(f'Key: {item} = {valForKey}')
-						self.my_dict.update({str(item): valForKey})
-					except Exception as e:
-						self.my_dict.update({str(item): "<Error>"})
-						continue
-				self.tblBasicInfos.loadExtendedInfoFromLockdownClient(self.my_dict)
+				self.window().updateStatusBar("Loading extended device infos ...")
+				self.window().start_workerGeneral(LockdownClientExt)
+#			devices = select_devices_by_connection_type(connection_type='USB', usbmux_address=usbmux_address)
+#			if len(devices) <= 1:
+#				self.window().updateStatusBar("Loading extended device infos ...")
+#				LockdownClientExt = create_using_usbmux(usbmux_address=usbmux_address)
+#				itemsCount = len(LockdownClientExt.all_domains)
+#				idx = 0
+#				for item in LockdownClientExt.all_domains:
+#					idx += 1
+#					try:
+#						valForKey = str(lockdown_get(LockdownClientExt, "", item, True))
+##						print(f'Key: {item} = {valForKey}')
+#						self.my_dict.update({str(item): valForKey})
+#					except Exception as e:
+#						self.my_dict.update({str(item): "<Error>"})
+#						continue
+#				self.tblBasicInfos.loadExtendedInfoFromLockdownClient(self.my_dict)
+#				newPrgVal = int(idx/itemsCount*100)
+#				self.window().updateProgress(newPrgVal)
+#		#		print(f"idx: {idx}, root_item.childCount(): {childCountCurr}, childCountOrig: {childCountOrig}, newPrgVal: {newPrgVal}")
+##				root_item.removeChild(root_item.child(0))
+##				sendProgressUpdate.emit(int(newPrgVal))
+##				QCoreApplication.processEvents()
 		pass
 
 
@@ -181,3 +267,4 @@ class TabGeneral(QWidget):
 #		self.gbBasic.move(self.gbBasic.x(), self.gbBasic.y() - (oldHeight - newHeight))		
 #		print(self.gbBasic.sizeHint().height())
 		pass
+		
