@@ -13,6 +13,7 @@ import datetime
 from pyqtHelper import human_readable_size
 #from pyqtDialog import InputDialog
 from helper.pyqtDialog import *
+from helper.pyqtMultilineTextDialog import *
 
 usbmux_address = None
 
@@ -96,8 +97,19 @@ def afc_rm(service_provider: LockdownClient, remote_file):
 	""" remove a file rooted at /var/mobile/Media """
 	AfcService(lockdown=service_provider).rm(remote_file)
 	
+def afc_openFile(service_provider: LockdownClient, remote_file):
+	""" remove a file rooted at /var/mobile/Media """
+	return AfcService(lockdown=service_provider).get_file_contents(remote_file)
+
+def afc_updateFile(service_provider: LockdownClient, remote_file, data):
+	""" remove a file rooted at /var/mobile/Media """
+	return AfcService(lockdown=service_provider).set_file_contents(remote_file, data)
+
 def afc_ls_proccess_dir(sp: AfcService, root_item: QTreeWidgetItem, remote_file = '/', recursive = False, subDir = False):
-	for path in sp.dirlist(remote_file, -1 if recursive else 1):
+	dirs = sp.dirlist(remote_file, -1 if recursive else 1)
+	dirCount = 10 #dirs
+	idx = 0
+	for path in dirs:
 		if(path != remote_file):
 			QCoreApplication.processEvents()
 			if interruptFCActive:
@@ -112,6 +124,7 @@ def afc_ls_proccess_dir(sp: AfcService, root_item: QTreeWidgetItem, remote_file 
 			child1_item = QTreeWidgetItem(root_item, [path[len(remote_file) + (1 if subDir else 0):], str(human_readable_size(sp.stat(path)["st_size"])), formatted_string]) # 'Dir' if AfcService(lockdown=service_provider).isdir(path) else 'File'])
 			if sp.isdir(path):
 				afc_ls_proccess_dir(sp, child1_item, path, recursive, True)
+			idx += 1
 
 #def itemExpanded(item):
 #	if item.parent() != None:
@@ -125,7 +138,7 @@ class AFCTreeWidget(QTreeWidget):
 		self.context_menu = QMenu(self)
 		actionShowInfos = self.context_menu.addAction("Show infos")
 		actionOpenFile = self.context_menu.addAction("Open File / Folder")
-		actionOpenFile.setEnabled(False)
+#		actionOpenFile.setEnabled(False)
 		actionCopyPath = self.context_menu.addAction("Copy Path to File/Folder")
 		self.context_menu.addSeparator()
 		actionPullFile = self.context_menu.addAction("Pull file")
@@ -136,6 +149,7 @@ class AFCTreeWidget(QTreeWidget):
 		self.context_menu.addSeparator()
 		actionRefresh = self.context_menu.addAction("Refresh")
 		
+		actionOpenFile.triggered.connect(self.actionOpenFile_triggered)
 		actionCopyPath.triggered.connect(self.actionCopyPath_triggered)
 		actionDeleteFile.triggered.connect(self.actionDeleteFile_triggered)
 		actionCreateDir.triggered.connect(self.actionCreateDir_triggered)
@@ -172,6 +186,26 @@ class AFCTreeWidget(QTreeWidget):
 		# Show the context menu
 		self.context_menu.exec(event.globalPos())
 		
+	def actionOpenFile_triggered(self):
+		selected_items = self.selectedItems()
+		if selected_items:
+			first_selected_item = selected_items[0]
+			print(first_selected_item.text(0))
+			
+			path_to_open = self.getPathForItem(first_selected_item)
+			if path_to_open != '':
+				devices = select_devices_by_connection_type(connection_type='USB', usbmux_address=usbmux_address)
+				if len(devices) <= 1:
+					file_content = afc_openFile(create_using_usbmux(usbmux_address=usbmux_address), path_to_open).decode('utf-8')
+					print(file_content)
+					self.window().updateStatusBar(f"Opening file '{first_selected_item.text(0)}' ...")
+					self.window().mlDialog = MultilineTextDialog("File content", f"Content of file '{first_selected_item.text(0)}'", file_content, path_to_open, self.saveFileContentCallback)
+					self.window().mlDialog.setModal(True)
+					self.window().mlDialog.show()
+					self.window().mlDialog.raise_()
+#					mlDialog = MultilineTextDialog()
+#					mlDialog.show()
+		
 	def actionRefresh_triggered(self):
 #		wind:Pymobiledevice3GUIWindow = self.window()
 		self.window().start_workerAFC()
@@ -191,16 +225,17 @@ class AFCTreeWidget(QTreeWidget):
 		
 				if button == QMessageBox.StandardButton.Yes:
 					print("Yes!")
-					devices = select_devices_by_connection_type(connection_type='USB', usbmux_address=usbmux_address)
-					if len(devices) <= 1:
-						current_item = first_selected_item
-						path_to_copy = ("/" if current_item.text(0) != "/" else "") + current_item.text(0)
-						while current_item.parent() != None:
-							current_item = current_item.parent()
-							if current_item.text(0) != "/":
-								path_to_copy = "/" + current_item.text(0) + path_to_copy
-						
-						if path_to_copy != '/':
+					
+					current_item = first_selected_item
+					path_to_copy = ("/" if current_item.text(0) != "/" else "") + current_item.text(0)
+					while current_item.parent() != None:
+						current_item = current_item.parent()
+						if current_item.text(0) != "/":
+							path_to_copy = "/" + current_item.text(0) + path_to_copy
+					
+					if path_to_copy != '/':
+						devices = select_devices_by_connection_type(connection_type='USB', usbmux_address=usbmux_address)
+						if len(devices) <= 1:
 							afc_rm(create_using_usbmux(usbmux_address=usbmux_address), path_to_copy)
 							if first_selected_item.parent() != None:
 								first_selected_item.parent().removeChild(first_selected_item)
@@ -227,7 +262,7 @@ class AFCTreeWidget(QTreeWidget):
 		
 		if selected_items:
 			first_selected_item = selected_items[0]
-			path_to_copy = self.getPathForItem(first_selected_item)		
+			path_to_copy = self.getPathForItem(first_selected_item)
 			pyperclip.copy(path_to_copy)
 			
 			if isinstance(self.window(), QMainWindow):
@@ -270,6 +305,13 @@ class AFCTreeWidget(QTreeWidget):
 #			self.window().inputDialog.show()
 #			self.window().inputDialog.raise_()
 	
+	def saveFileContentCallback(self, success, filepath, result):
+		print(f'In saveFileContentCallback => success: {success} / result: {result}')
+		if(success and result != ''):
+			devices = select_devices_by_connection_type(connection_type='USB', usbmux_address=usbmux_address)
+			if len(devices) <= 1:
+				afc_updateFile(create_using_usbmux(usbmux_address=usbmux_address), filepath, str(result).encode("utf-8"))
+				
 	def getNewFolderNameCallback(self, success, result):
 		print(f'In getNewFolderNameCallback => success: {success} / result: {result}')
 		if(success and result != ''):

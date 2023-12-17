@@ -66,6 +66,7 @@ class Pymobiledevice3GUIWindow(QMainWindow):
         self.setFixedSize(WINDOW_SIZE * 2, WINDOW_SIZE)
         
         self.inputDialog = InputDialog("Enter folder name", "Please enter a name for the new folder", self.inputCallback)
+        self.mlDialog = MultilineTextDialog("File content", "", "", "", self.inputCallback)
         
 #       self.showEvent(<#a0#>) .connect(self, Qt.SIGNAL('showEvent(QShowEvent*)'), self.onWindowShown)
 #       self.connect(self, Qt.SIGNAL('loadFinished(bool)'), self.onLoadFinished)
