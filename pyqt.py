@@ -3,6 +3,7 @@
 import sys
 import os
 
+from threading import Timer
 from functools import partial
 
 from pygnuutils.ls import Ls
@@ -207,6 +208,7 @@ class Pymobiledevice3GUIWindow(QMainWindow):
         worker = SysLogWorker(self.sysLog_receiver)
         worker.signals.finished.connect(self.handle_finished)
         worker.signals.sendSysLog.connect(self.handle_sendSysLog)
+#       worker.signals.sendProgressUpdate.connect(self.handle_progressUpdate)
         
 #       workerAFC = AFCWorker(self.afc_receiver, self.tabAFC.root_item)
 #       workerAFC.signals.finished.connect(self.handle_finished)
@@ -220,13 +222,30 @@ class Pymobiledevice3GUIWindow(QMainWindow):
     
     def start_workerAFC(self):
         workerAFC = AFCWorker(self.afc_receiver, self.tabAFC.root_item)
+        workerAFC.signals.sendProgressUpdate.connect(self.handle_progressUpdate)
+        workerAFC.signals.finished.connect(self.handle_progressFinished)
         self.threadpool.start(workerAFC)
         
         QCoreApplication.processEvents()
 
     def handle_result(self, result):
         print(f"Received result in the main thread: {result}")
-
+    
+    def handle_progressFinished(self):
+        t = Timer(1.0, self.resetProgress)
+        t.start() # after 30 seconds, "hello, world" will be printed
+    
+    def updateProgress(self, newValue):
+#       print(f"newValue: {newValue}")
+        self.progressbar.setValue(int(newValue))
+#       self.progressbar.repaint()
+        
+    def resetProgress(self):
+        self.updateProgress(0)
+        
+    def handle_progressUpdate(self, newProgress:int):
+        self.updateProgress(newProgress)
+        
     def handle_finished(self):
         print("Worker finished")
         

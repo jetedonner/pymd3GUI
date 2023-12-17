@@ -2,7 +2,7 @@
 
 import sys
 import subprocess
-from PyQt6.QtWidgets import QApplication, QDialog, QLineEdit, QPushButton, QLabel, QVBoxLayout, QHBoxLayout, QWidget, QTextEdit
+from PyQt6.QtWidgets import QApplication, QDialog, QLineEdit, QPushButton, QLabel, QVBoxLayout, QHBoxLayout, QWidget, QTextEdit, QComboBox, QSizePolicy
 from PyQt6.QtCore import Qt
 
 class MultilineTextDialog(QDialog):
@@ -34,9 +34,30 @@ class MultilineTextDialog(QDialog):
 		cancelButton = QPushButton("Close")
 		cancelButton.clicked.connect(self.cancelAction)
 		
+		self.cmbEncoding = QComboBox()
+		self.cmbEncoding.addItem("utf-8")
+		self.cmbEncoding.addItem("utf-16")
+		self.cmbEncoding.addItem("ascii")
+		self.cmbEncoding.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Maximum)
+#		mux = usbmux.MuxConnection.create()
+#		mux.get_device_list(0.1)
+#		devices = mux.devices
+#		for device in devices:
+#			self.combobox.addItem(device.serial)
+			
 		# Create a layout to arrange the widgets
+		
+		encodingLabel = QLabel(f"Encoding:")
+		encodingLabel.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Maximum)
+		layoutTop = QHBoxLayout()
+		widTop = QWidget()
+		widTop.setLayout(layoutTop)
+		
+		layoutTop.addWidget(instructionsLabel)
+		layoutTop.addWidget(encodingLabel)
+		layoutTop.addWidget(self.cmbEncoding)
 		layout = QVBoxLayout()
-		layout.addWidget(instructionsLabel)
+		layout.addWidget(widTop)
 		layout.addWidget(self.txtMultiline)
 		layButtons = QHBoxLayout()
 		widButtons = QWidget()
