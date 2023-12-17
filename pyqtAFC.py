@@ -8,10 +8,14 @@ from PyQt6.QtCore import *
 from PyQt6.QtWidgets import *
 
 import pyperclip
+import datetime
 
 from pyqtHelper import human_readable_size
+from pyqtDialog import InputDialog
 
 usbmux_address = None
+
+interruptFCActive = False
 
 class AFCReceiver(QObject):
 #	data_received = pyqtSignal(str)
@@ -25,7 +29,7 @@ class AFCWorkerSignals(QObject):
 class AFCWorker(QRunnable):
 	def __init__(self, data_receiver, root_item):
 		super(AFCWorker, self).__init__()
-#		self.isSysLogActive = False
+		self.isAFCActive = False
 		self.root_item = root_item
 		self.data_receiver = data_receiver
 		self.signals = AFCWorkerSignals()
@@ -36,7 +40,13 @@ class AFCWorker(QRunnable):
 		self.runAFCLs()
 		
 	def runAFCLs(self):
-#		self.isSysLogActive = True
+		if self.isAFCActive:
+			interruptFCActive = True
+			return
+		else:
+			interruptFCActive = False
+			
+		self.isAFCActive = True
 		devices = select_devices_by_connection_type(connection_type='USB', usbmux_address=usbmux_address)
 #		print(f"usbmux_address: {usbmux_address}")
 		if len(devices) <= 1:
@@ -50,24 +60,48 @@ class AFCWorker(QRunnable):
 #				QCoreApplication.processEvents()
 #				if self.isSysLogActive is False:
 #					break
+		self.isAFCActive = False
 		QCoreApplication.processEvents()		
 		self.signals.finished.emit()
+		
 		
 	def handle_interruptAFC(self):
 #		print(f"Received interrupt in the sysLog worker thread")
 #		self.isSysLogActive = False
 		pass
-		
+
+def afc_mkdir(service_provider: LockdownClient, foldername: str, remote_file = '/'):
+	""" perform a dirlist rooted at /var/mobile/Media """
+	sp = AfcService(lockdown=service_provider)
+	
+	sp.makedirs(remote_file + foldername)
+#	afc_ls_proccess_dir(sp, root_item, remote_file, recursive, False)
+	
 def afc_ls(service_provider: LockdownClient, root_item: QTreeWidgetItem, remote_file = '/', recursive = False):
 	""" perform a dirlist rooted at /var/mobile/Media """
+#	rootItem = self.topLevelItem(0)
+	childCountOrig = root_item.childCount()
+#		print(f'childCountOrig: {childCountOrig}')
+#	if rAFCTreeWidget(oot_item.treeWidget())
+	while root_item.childCount() > 0:
+		root_item.removeChild(root_item.child(0))
+		
 	sp = AfcService(lockdown=service_provider)
 	afc_ls_proccess_dir(sp, root_item, remote_file, recursive, False)
 	
 def afc_ls_proccess_dir(sp: AfcService, root_item: QTreeWidgetItem, remote_file = '/', recursive = False, subDir = False):
 	for path in sp.dirlist(remote_file, -1 if recursive else 1):
-#		print(path)
 		if(path != remote_file):
-			child1_item = QTreeWidgetItem(root_item, [path[len(remote_file) + (1 if subDir else 0):], str(human_readable_size(sp.stat(path)["st_size"])), str(sp.stat(path)["st_birthtime"])]) # 'Dir' if AfcService(lockdown=service_provider).isdir(path) else 'File'])
+			if interruptFCActive:
+				break
+			formatted_string = str(sp.stat(path)["st_birthtime"])
+			try:
+				date = datetime.datetime.strptime(formatted_string, "%Y-%m-%d %H:%M:%S.%f")
+				formatted_string = date.strftime("%Y-%m-%d %H:%M:%S")
+			except Exception as e:
+				pass
+				
+			child1_item = QTreeWidgetItem(root_item, [path[len(remote_file) + (1 if subDir else 0):], str(human_readable_size(sp.stat(path)["st_size"])), formatted_string]) # 'Dir' if AfcService(lockdown=service_provider).isdir(path) else 'File'])
 			if sp.isdir(path):
 				afc_ls_proccess_dir(sp, child1_item, path, recursive, True)
 
@@ -91,8 +125,12 @@ class AFCTreeWidget(QTreeWidget):
 		self.context_menu.addSeparator()
 		actionDeleteFile = self.context_menu.addAction("Delete file")
 		actionCreateDir = self.context_menu.addAction("Create directory")
+		self.context_menu.addSeparator()
+		actionRefresh = self.context_menu.addAction("Refresh")
 		
 		actionCopyPath.triggered.connect(self.actionCopyPath_triggered)
+		actionCreateDir.triggered.connect(self.actionCreateDir_triggered)
+		actionRefresh.triggered.connect(self.actionRefresh_triggered)
 #		self.parent_window = self.window()
 		self.show()
 		
@@ -108,23 +146,27 @@ class AFCTreeWidget(QTreeWidget):
 			# Do something with the selected item
 			print(first_selected_item.text())
 			
-	def contextMenuRequested(self, point):
-		# Get the selected item model
-		selected_model = self.model()  # Get the QAbstractItemModel instance
-		
-		# Get the selected item index
-		selected_index = self.selectedIndexes()[0]  # Get the first selected index
-		
-		# Get the selected item
-		selected_item = selected_model.itemFromIndex(selected_index)  # Get the item at the index
-		
-		# Do something with the selected item
-		print(selected_item.text())
+#	def contextMenuRequested(self, point):
+#		# Get the selected item model
+#		selected_model = self.model()  # Get the QAbstractItemModel instance
+#		
+#		# Get the selected item index
+#		selected_index = self.selectedIndexes()[0]  # Get the first selected index
+#		
+#		# Get the selected item
+#		selected_item = selected_model.itemFromIndex(selected_index)  # Get the item at the index
+#		
+#		# Do something with the selected item
+#		print(selected_item.text())
 		
 	def contextMenuEvent(self, event):
 		# Show the context menu
 		self.context_menu.exec(event.globalPos())
 		
+	def actionRefresh_triggered(self):
+#		wind:Pymobiledevice3GUIWindow = self.window()
+		self.window().start_workerAFC()
+	
 	def actionCopyPath_triggered(self):
 		selected_items = self.selectedItems()
 		
@@ -142,6 +184,25 @@ class AFCTreeWidget(QTreeWidget):
 		if isinstance(self.window(), QMainWindow):
 			self.window().updateStatusBar(f"Copied path: '{path_to_copy}' to clipboard ...")
 		pass
+	
+	def actionCreateDir_triggered(self):
+		selected_items = self.selectedItems()
+		if selected_items:
+			first_selected_item = selected_items[0]
+			print(first_selected_item.text(0))
+			
+			self.window().inputDialog = InputDialog("Enter folder name", "Please enter a name for the new folder", self.getNewFolderNameCallback)
+			self.window().inputDialog.setModal(True)
+			self.window().inputDialog.show()
+			self.window().inputDialog.raise_()
+	
+	def getNewFolderNameCallback(self, success, result):
+		print(f'In getNewFolderNameCallback => success: {success} / result: {result}')
+		if(success and result != ''):
+			devices = select_devices_by_connection_type(connection_type='USB', usbmux_address=usbmux_address)
+			if len(devices) <= 1:
+				afc_mkdir(create_using_usbmux(usbmux_address=usbmux_address), result, '/')
+			
 		
 class TabAFC(QWidget):
 	
@@ -149,6 +210,11 @@ class TabAFC(QWidget):
 		super().__init__(parent)
 		
 		self.setLayout(QVBoxLayout())
+		
+		self.gbBrowser = QGroupBox("Browser")
+		self.gbBrowser.setLayout(QHBoxLayout())
+		self.gbBrowser.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Minimum)
+		
 		self.tree_widget = AFCTreeWidget()
 		self.tree_widget.setHeaderLabels(['File/Folder', 'Size', 'Created'])
 		
@@ -158,7 +224,7 @@ class TabAFC(QWidget):
 		self.tree_widget.expandItem(self.root_item)
 		self.tree_widget.header().resizeSection(0, 256)
 #		self.tree_widget.itemExpanded.connect(itemExpanded)
-
-		self.layout().addWidget(self.tree_widget)
+		self.gbBrowser.layout().addWidget(self.tree_widget)
+		self.layout().addWidget(self.gbBrowser)
 		
 			

@@ -55,7 +55,7 @@ class TabGeneral(QWidget):
 #		print("BASIC INFOS")
 		self.gbSelection = QGroupBox("Selection")
 		self.gbSelection.setLayout(QHBoxLayout())
-		self.gbSelection.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
+		self.gbSelection.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Maximum)
 		
 		self.layMode = QVBoxLayout()
 		self.widMode = QWidget()
@@ -88,6 +88,7 @@ class TabGeneral(QWidget):
 		
 		# Create a checkbox
 		self.chkUSB = QCheckBox("USB Devices")
+		self.chkUSB.setChecked(True)
 		self.chkNetwork = QCheckBox("Network Devices")
 		# Create a button to toggle the checkbox
 #		cmdRefresh = QPushButton("Refresh")
@@ -100,37 +101,29 @@ class TabGeneral(QWidget):
 		self.gbSelection.layout().addWidget(self.widChannel)
 		
 		# Create a button to resize the group box
-		self.resizeButton = QPushButton("Resize Group Box")
-	
-		# Connect the resize button to a slot
-		self.resizeButton.clicked.connect(self.resizeGroupBox)
-		self.gbSelection.layout().addWidget(self.resizeButton)
+		self.refreshButton = QPushButton("Reload Infos")
+		self.refreshButton.clicked.connect(self.refreshInfos)
+		self.gbSelection.layout().addWidget(self.refreshButton)
 			
 		self.gbBasic = QGroupBox("Basic Infos")
 		self.gbBasic.setLayout(QHBoxLayout())
-		self.gbBasic.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
-		
+		self.gbBasic.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Minimum)		
 		self.layout().addWidget(self.gbSelection)
 		self.layout().addWidget(self.gbBasic)
 		
-		self.lblBuildVersion = QLabel("BuildVersion:")
-		self.txtBuildVersion = QLineEdit()
-		self.txtBuildVersion.setReadOnly(True)
-#		self.gbBasic.layout().addWidget(self.lblBuildVersion)
-#		self.gbBasic.layout().addWidget(self.txtBuildVersion)
-		
-		
-		self.lblConnectionType = QLabel("ConnectionType:")
-		self.txtConnectionType = QLineEdit()
-		self.txtConnectionType.setReadOnly(True)
-#		self.gbBasic.layout().addWidget(self.lblConnectionType)
-#		self.gbBasic.layout().addWidget(self.txtConnectionType)
+#		self.lblBuildVersion = QLabel("BuildVersion:")
+#		self.txtBuildVersion = QLineEdit()
+#		self.txtBuildVersion.setReadOnly(True)
+#		
+#		self.lblConnectionType = QLabel("ConnectionType:")
+#		self.txtConnectionType = QLineEdit()
+#		self.txtConnectionType.setReadOnly(True)
 		
 		self.tblBasicInfos = BasicInfoTableWidget(None)
 		self.gbBasic.layout().addWidget(self.tblBasicInfos)
 		
-		self.gbSelection.setMinimumHeight(0)
-		self.gbSelection.adjustSize()
+#		self.gbSelection.setMinimumHeight(0)
+#		self.gbSelection.adjustSize()
 		
 		self.lockdownClient = usbmux_list(usbmux_address, True, True, False)
 #		self.tblBasicInfos.loadBasicInfoFromLockdownClient(lockdownClient)
@@ -148,61 +141,43 @@ class TabGeneral(QWidget):
 		self.tblBasicInfos.loadBasicInfoFromLockdownClient(self.lockdownClient)
 	
 	def optBasicToggled(self, state):
-#		print(f'optBasicToggled: {state}')
 		if(state):
+			self.window().updateStatusBar("Loading basic device infos ...")
+			self.lockdownClient = usbmux_list(usbmux_address, True, True, False)
 			self.tblBasicInfos.loadBasicInfoFromLockdownClient(self.lockdownClient)
 		pass
 		
 	def optExtToggled(self, state):
-#		print(f'optExtToggled: {state}')
 		if(state):
-#			print("LOADING EXT IBNFOS 1")
+			self.my_dict = {}
 			devices = select_devices_by_connection_type(connection_type='USB', usbmux_address=usbmux_address)
 			if len(devices) <= 1:
+				self.window().updateStatusBar("Loading extended device infos ...")
 				LockdownClientExt = create_using_usbmux(usbmux_address=usbmux_address)
 				for item in LockdownClientExt.all_domains:
-#					print(item)
-#					item = item
 					try:
 						valForKey = str(lockdown_get(LockdownClientExt, "", item, True))
 #						print(f'Key: {item} = {valForKey}')
 						self.my_dict.update({str(item): valForKey})
 					except Exception as e:
-						print(item)
 						self.my_dict.update({str(item): "<Error>"})
 						continue
 				self.tblBasicInfos.loadExtendedInfoFromLockdownClient(self.my_dict)
 		pass
 
 
-	def resizeGroupBox(self):
-#		self.gbSelection.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
-#		self.gbBasic.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
+	def refreshInfos(self):
 		
-		# Resize the first group box to the space it needs
-#		groupBox1 = self.findChild(QGroupBox, "Group Box 1")
-		oldHeight = self.gbSelection.height()
-		print(oldHeight)
-		self.gbSelection.setMinimumHeight(0)
-		self.gbSelection.resize(self.gbSelection.width(), self.gbSelection.sizeHint().height())
-		newHeight = self.gbSelection.sizeHint().height()
-		print(newHeight)
-#		self.gbSelection.adjustSize()
-	
-		# Resize the second group box to fill the remaining space
-#		groupBox2 = self.findChild(QGroupBox, "Group Box 2")
-		print(self.gbBasic.height())
-		self.gbBasic.setMinimumHeight(0)
-		self.gbBasic.resize(self.gbBasic.width(), self.gbBasic.sizeHint().height() + (oldHeight - newHeight))
-		
-		self.gbBasic.move(self.gbBasic.x(), self.gbBasic.y() - (oldHeight - newHeight))
-		
-		print(self.gbBasic.sizeHint().height())
-#		# Resize the group box to the space it needs
-#		groupBox = self.gbSelection #self.findChild(QGroupBox)
-#		groupBox.setMinimumHeight(0)
-##		groupBox.setSizePolicy(QSizePolicy., <#ver#>)# (self.window().width())
-#		groupBox.adjustSize()
-#		groupBox.sizePolicy().setHorizontalStretch(100)
-#		self.gbBasic.sizePolicy().setVerticalPolicy(QSizePolicy.Policy.Maximum)
-##		self.gbBasic.adjustSize()
+#		oldHeight = self.gbSelection.height()
+#		print(oldHeight)
+#		self.gbSelection.setMinimumHeight(0)
+#		self.gbSelection.resize(self.gbSelection.width(), self.gbSelection.sizeHint().height())
+#		newHeight = self.gbSelection.sizeHint().height()
+#		print(newHeight)
+#		
+#		print(self.gbBasic.height())
+#		self.gbBasic.setMinimumHeight(0)
+#		self.gbBasic.resize(self.gbBasic.width(), self.gbBasic.sizeHint().height() + (oldHeight - newHeight))
+#		self.gbBasic.move(self.gbBasic.x(), self.gbBasic.y() - (oldHeight - newHeight))		
+#		print(self.gbBasic.sizeHint().height())
+		pass

@@ -153,7 +153,13 @@ class TabTunnel(QWidget):
 		
 		self.gbCtrl = QGroupBox("Tunnel control")
 		self.gbCtrl.setLayout(QVBoxLayout())
+		
+		self.gbConsole = QGroupBox("Console output")
+		self.gbConsole.setLayout(QHBoxLayout())
+		self.gbConsole.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
+		
 		self.layout().addWidget(self.gbCtrl)
+		self.layout().addWidget(self.gbConsole)
 #		self.tree_widget = AFCTreeWidget()
 #		self.tree_widget.setHeaderLabels(['File/Folder', 'Size', 'Created'])
 #		

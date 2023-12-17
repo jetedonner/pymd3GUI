@@ -63,6 +63,8 @@ class Pymobiledevice3GUIWindow(QMainWindow):
         self.setWindowTitle("pymd3GUI - GUI for pymobiledevice3")
         self.setFixedSize(WINDOW_SIZE * 2, WINDOW_SIZE)
         
+        self.inputDialog = InputDialog("Enter folder name", "Please enter a name for the new folder", self.inputCallback)
+        
 #       self.showEvent(<#a0#>) .connect(self, Qt.SIGNAL('showEvent(QShowEvent*)'), self.onWindowShown)
 #       self.connect(self, Qt.SIGNAL('loadFinished(bool)'), self.onLoadFinished)
         
@@ -97,10 +99,17 @@ class Pymobiledevice3GUIWindow(QMainWindow):
         self.setStatusBar(self.statusBar)
 
         self.topLayout = QHBoxLayout()
-        self.topLayout.setStretch(0, 500)
-        self.devicesLabel = QLabel("Devices:")
-        self.topLayout.addWidget(self.devicesLabel)
-
+#       self.topLayout.setStretch(0, 500)
+#       self.devicesLabel = QLabel("Devices:")
+#       self.devicesLabel.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Minimum)
+#       self.topLayout.addWidget(self.devicesLabel)
+        self.combobox.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Minimum)
+        
+        self.gbDevices = QGroupBox("Devices")
+        self.gbDevices.setLayout(QHBoxLayout())
+        self.gbDevices.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Maximum)
+        self.gbDevices.layout().addWidget(self.combobox)
+        
         self.generalLayout = QVBoxLayout()
         self.buttonMap = QPushButton("TeSet")
         
@@ -119,7 +128,7 @@ class Pymobiledevice3GUIWindow(QMainWindow):
         self.tabTunnel = TabTunnel()
         self.tabWidget.addTab(self.tabTunnel, "Tunnel")
         
-        self.topLayout.addWidget(self.combobox)
+        self.topLayout.addWidget(self.gbDevices)
 
         self.topWidget = QWidget(self)
         self.topWidget.setLayout(self.topLayout)
@@ -148,39 +157,39 @@ class Pymobiledevice3GUIWindow(QMainWindow):
         self.start_workerAFC()
         
         self.updateStatusBar("Ready...")
-
     
+    def inputCallback(self, success, result):
+        print(f'In inputCallback => success: {success} / result: {result}')
+#   def showEvent(self, event):
+#       print('in showEvent')
+#       # Set image on QGraphicsView here, or something else that has to be done in showEvent
+#       
+#       # Which of these is correct ??
+##       super(MainForm, self).showEvent(event)
+#       super().showEvent(event)
+#       self.tabGeneral.refreshInfos()
+#       self.update()
+#       
+#   def loadFinished(self, successful):
+#       print('in loadFinished')
+#       # Set image on QGraphicsView here, or something else that has to be done in showEvent
+#       
+#       # Which of these is correct ??
+##       super(MainForm, self).showEvent(event)
+#       super().loadFinished(successful)
+#   # Set the window title
+##   self.setWindowTitle("Window Loading Example")
     
-    def showEvent(self, event):
-        print('in showEvent')
-        # Set image on QGraphicsView here, or something else that has to be done in showEvent
-        
-        # Which of these is correct ??
-#       super(MainForm, self).showEvent(event)
-        super().showEvent(event)
-        self.tabGeneral.resizeGroupBox()
-        self.update()
-        
-    def loadFinished(self, successful):
-        print('in loadFinished')
-        # Set image on QGraphicsView here, or something else that has to be done in showEvent
-        
-        # Which of these is correct ??
-#       super(MainForm, self).showEvent(event)
-        super().loadFinished(successful)
-    # Set the window title
-#   self.setWindowTitle("Window Loading Example")
-    
-    def onWindowShown(self, event):
-        # Perform some action when the window is shown
-        print("Window has been shown")
-        
-    def onLoadFinished(self, successful):
-        # Perform some action when the window has finished loading
-        if successful:
-            print("Window has finished loading")
-        else:
-            print("Window failed to load")
+#   def onWindowShown(self, event):
+#       # Perform some action when the window is shown
+#       print("Window has been shown")
+#       
+#   def onLoadFinished(self, successful):
+#       # Perform some action when the window has finished loading
+#       if successful:
+#           print("Window has finished loading")
+#       else:
+#           print("Window failed to load")
         
     def start_worker(self):
         worker = SysLogWorker(self.sysLog_receiver)
@@ -214,6 +223,7 @@ class Pymobiledevice3GUIWindow(QMainWindow):
 
     def updateStatusBar(self, msg):
         self.statusBar.showMessage(msg)
+        self.statusBar.repaint()
 
 
 class PyMobiledevice3GUI:
