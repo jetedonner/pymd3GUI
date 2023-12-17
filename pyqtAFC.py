@@ -15,6 +15,8 @@ from pyqtHelper import human_readable_size
 #from pyqtDialog import InputDialog
 from helper.pyqtDialog import *
 from helper.pyqtMultilineTextDialog import *
+from helper.pyqtFileContentDialog import *
+from helper.pyqtIconHelper import *
 
 usbmux_address = None
 
@@ -102,8 +104,10 @@ def afc_updateFile(service_provider: LockdownClient, remote_file, data):
 	return AfcService(lockdown=service_provider).set_file_contents(remote_file, data)
 
 def afc_ls_proccess_dir(sp: AfcService, root_item: QTreeWidgetItem, remote_file = '/', recursive = False, subDir = False, sendProgressUpdate = None):
-	iconFolder = QIcon(os.path.join('resources', 'folder.png'))
-	iconFile = QIcon(os.path.join('resources', 'file.png'))
+#	iconFolder = QIcon(os.path.join('resources', 'folder.png'))
+#	iconFile = QIcon(os.path.join('resources', 'file.png'))
+	global iconFolder
+	global iconFile
 #	print(remote_file)
 	
 	listDirs = sp.listdir(remote_file)
@@ -118,20 +122,34 @@ def afc_ls_proccess_dir(sp: AfcService, root_item: QTreeWidgetItem, remote_file 
 				QCoreApplication.processEvents()
 			if interruptFCActive:
 				break
-			formatted_string = str(sp.stat(path)["st_birthtime"])
-			try:
-				date = datetime.datetime.strptime(formatted_string, "%Y-%m-%d %H:%M:%S.%f")
-				formatted_string = date.strftime("%Y-%m-%d %H:%M:%S")
-			except Exception as e:
-				pass
-				
-			child1_item = QTreeWidgetItem(root_item, [path[len(remote_file) + (1 if subDir else 0):], str(human_readable_size(sp.stat(path)["st_size"])), formatted_string]) # 'Dir' if AfcService(lockdown=service_provider).isdir(path) else 'File'])
+			print(path)
+			print(sp.stat(path))
+			sp_stat = sp.stat(path)
+			child1_item = QTreeWidgetItem(root_item, [path[len(remote_file) + (1 if subDir else 0):], str(human_readable_size(sp_stat["st_size"])), formateDateTime(sp_stat["st_birthtime"]), formateDateTime(sp_stat["st_mtime"]), str(sp_stat["st_ifmt"])])
 			if sp.isdir(path):
-				child1_item.setIcon(0, iconFolder)
+				child1_item.setIcon(0, IconHelper.getFolderIcon())
 				afc_ls_proccess_dir(sp, child1_item, path, recursive, True, sendProgressUpdate)
 			else:
-				child1_item.setIcon(0, iconFile)
+				child1_item.setIcon(0, IconHelper.getFileIcon())
 			idx += 1
+
+def formateDateTimeString(dateTimeString):
+	formatted_string = dateTimeString
+	try:
+		date = datetime.datetime.strptime(formatted_string, "%Y-%m-%d %H:%M:%S.%f")
+		formatted_string = date.strftime("%Y-%m-%d %H:%M:%S")
+	except Exception as e:
+		pass
+	return formatted_string
+
+def formateDateTime(dateTimeObj):
+	formatted_string = "<ERROR>"
+	try:
+#		date = datetime.datetime.strptime(formatted_string, "%Y-%m-%d %H:%M:%S.%f")
+		formatted_string = dateTimeObj.strftime("%Y-%m-%d %H:%M:%S")
+	except Exception as e:
+		pass
+	return formatted_string
 
 def afc_pull(service_provider: LockdownClient, remote_file, local_file):
 	""" pull remote file from /var/mobile/Media """
@@ -201,13 +219,22 @@ class AFCTreeWidget(QTreeWidget):
 			if path_to_open != '':
 				devices = select_devices_by_connection_type(connection_type='USB', usbmux_address=usbmux_address)
 				if len(devices) <= 1:
-					file_content = afc_openFile(create_using_usbmux(usbmux_address=usbmux_address), path_to_open).decode('utf-8')
+					
+					fileBytes = afc_openFile(create_using_usbmux(usbmux_address=usbmux_address), path_to_open)
+					file_content = fileBytes.decode('utf-8')
 					print(file_content)
+					hexData = [format(byte, '02x') for byte in fileBytes]
+					# Format the hexadecimal data for display
+					formattedHexData = ' '.join(hexData)
+					print(formattedHexData)
+					
 					self.window().updateStatusBar(f"Opening file '{first_selected_item.text(0)}' ...")
-					self.window().mlDialog = MultilineTextDialog("File content", f"Content of file '{first_selected_item.text(0)}'", file_content, path_to_open, self.saveFileContentCallback)
-					self.window().mlDialog.setModal(True)
-					self.window().mlDialog.show()
-					self.window().mlDialog.raise_()
+#					self.window().mlDialog = MultilineTextDialog("File content", f"Content of file '{first_selected_item.text(0)}'", file_content, path_to_open, self.saveFileContentCallback)
+					self.window().fileContentDialog = FileContentDialog("File content", f"Content of file '{first_selected_item.text(0)}'", fileBytes, path_to_open, self.saveFileContentCallback)
+					
+					self.window().fileContentDialog.setModal(True)
+					self.window().fileContentDialog.show()
+#					self.window().mlDialog.raise_()
 		
 	def actionRefresh_triggered(self):
 		self.window().start_workerAFC()
@@ -277,15 +304,8 @@ class AFCTreeWidget(QTreeWidget):
 							continue
 						
 						if afc_push(lockdown, pathToLocalFile, remotePath):
-							afcService_stat = afcService.stat(remotePath + "/" + localFilename)
-							formatted_string = str(afcService_stat["st_birthtime"])
-							try:
-								date = datetime.datetime.strptime(formatted_string, "%Y-%m-%d %H:%M:%S.%f")
-								formatted_string = date.strftime("%Y-%m-%d %H:%M:%S")
-							except Exception as e:
-								pass
-							
-							child1_item = QTreeWidgetItem(selected_item, [localFilename, str(human_readable_size(afcService_stat["st_size"])), formatted_string])
+							sp_stat = afcService.stat(remotePath + "/" + localFilename)
+							child1_item = QTreeWidgetItem(selected_item, [localFilename, str(human_readable_size(sp_stat["st_size"])), formateDateTime(sp_stat["st_birthtime"]), formateDateTime(sp_stat["st_mtime"]), str(sp_stat["st_ifmt"])])
 							
 							if afcService.isdir(remotePath + "/" + localFilename):
 								child1_item.setIcon(0, iconFolder)
@@ -381,13 +401,7 @@ class AFCTreeWidget(QTreeWidget):
 						devices = select_devices_by_connection_type(connection_type='USB', usbmux_address=usbmux_address)
 						if len(devices) <= 1:
 							sp_stat = afc_mkdir(create_using_usbmux(usbmux_address=usbmux_address), text, path_to_create_folder)
-							formatted_string = str(sp_stat["st_birthtime"])
-							try:
-								date = datetime.datetime.strptime(formatted_string, "%Y-%m-%d %H:%M:%S.%f")
-								formatted_string = date.strftime("%Y-%m-%d %H:%M:%S")
-							except Exception as e:
-								pass
-							child1_item = QTreeWidgetItem(selected_item, [text, str(human_readable_size(sp_stat["st_size"])), formatted_string])
+							child1_item = QTreeWidgetItem(selected_item, [text, str(human_readable_size(sp_stat["st_size"])), formateDateTime(sp_stat["st_birthtime"]), formateDateTime(sp_stat["st_mtime"]), str(sp_stat["st_ifmt"])])
 	
 	def saveFileContentCallback(self, success, filepath, result):
 		print(f'In saveFileContentCallback => success: {success} / result: {result}')
@@ -417,9 +431,9 @@ class TabAFC(QWidget):
 		self.gbBrowser.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Minimum)
 		
 		self.tree_widget = AFCTreeWidget()
-		self.tree_widget.setHeaderLabels(['File/Folder', 'Size', 'Created'])
+		self.tree_widget.setHeaderLabels(['File/Folder', 'Size', 'Created', 'Modified', 'Type'])
 		
-		self.root_item = QTreeWidgetItem(self.tree_widget, ['/', '', '/var/mobile/Media'])
+		self.root_item = QTreeWidgetItem(self.tree_widget, ['/', '', '/var/mobile/Media', '', ''])
 		
 		# Expand the root item
 		self.tree_widget.expandItem(self.root_item)

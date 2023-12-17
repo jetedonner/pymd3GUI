@@ -35,7 +35,8 @@ from pyqtDiagnostics import *
 from pyqtSysLog import *
 from pyqtTunnel import *
 
-from helper import pyqtDialog
+from helper import *
+#from helper import pyqtDialog
 
 ERROR_MSG = "ERROR"
 WINDOW_SIZE = 620
@@ -68,6 +69,7 @@ class Pymobiledevice3GUIWindow(QMainWindow):
         
         self.inputDialog = InputDialog("Enter folder name", "Please enter a name for the new folder", self.inputCallback)
         self.mlDialog = MultilineTextDialog("File content", "", "", "", self.inputCallback)
+        self.fileContentDialog = FileContentDialog("File content", "", bytes(0), "", self.inputCallback)
         
 #       self.showEvent(<#a0#>) .connect(self, Qt.SIGNAL('showEvent(QShowEvent*)'), self.onWindowShown)
 #       self.connect(self, Qt.SIGNAL('loadFinished(bool)'), self.onLoadFinished)
@@ -103,10 +105,6 @@ class Pymobiledevice3GUIWindow(QMainWindow):
         self.setStatusBar(self.statusBar)
 
         self.topLayout = QHBoxLayout()
-#       self.topLayout.setStretch(0, 500)
-#       self.devicesLabel = QLabel("Devices:")
-#       self.devicesLabel.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Minimum)
-#       self.topLayout.addWidget(self.devicesLabel)
         self.combobox.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Minimum)
         
         self.gbDevices = QGroupBox("Devices")
@@ -271,7 +269,7 @@ def main():
     # Load the icon file
     icon_path = os.path.join('resources', 'app_icon.png')
     icon = QPixmap(icon_path)
-
+    IconHelper.initIcons()
     # Set the app icon
     pymobiledevice3GUIApp.setWindowIcon(QIcon(icon))
 
