@@ -93,6 +93,19 @@ class TabDiagnostics(QWidget):
 		self.cmdSleepDevice.clicked.connect(sleepClickedHandler)
 		self.ModeGP.layout().addWidget(self.cmdSleepDevice)
 		
+		self.cmdEnterRecovery = QPushButton("Enter Recovery")
+		
+		def enterRecoveryClickedHandler():
+			# usbmux_address = None
+			devices = select_devices_by_connection_type(connection_type='USB', usbmux_address=usbmux_address)
+			if len(devices) <= 1:
+				create_using_usbmux(usbmux_address=usbmux_address).enter_recovery()
+				# print("Device is shutting down ...")
+				self.window().updateStatusBar("Device is going to enter recovery ...")
+				
+		self.cmdEnterRecovery.clicked.connect(enterRecoveryClickedHandler)
+		self.ModeGP.layout().addWidget(self.cmdEnterRecovery)
+		
 		self.layout().addWidget(self.ModeGP)
 		
 		self.InfoGP = QGroupBox("Infos")

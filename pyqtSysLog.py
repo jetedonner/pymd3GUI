@@ -3,6 +3,7 @@ from pymobiledevice3.usbmux import select_devices_by_connection_type
 from pymobiledevice3.lockdown import LockdownClient, create_using_usbmux
 from pymobiledevice3.services.syslog import SyslogService
 from pymobiledevice3.services.os_trace import OsTraceService, SyslogLogLevel
+#'from pymobiledevice3.services.os_trace import OsTraceService'
 
 from PyQt6.QtCore import *
 from PyQt6.QtGui import QIntValidator, QColor
@@ -12,6 +13,10 @@ usbmux_address = None
 
 autoScrollSysLog = True
 
+def processes_ps(service_provider: LockdownClient):
+	""" show process list """
+	return OsTraceService(lockdown=service_provider).get_pid_list().get('Payload')
+	
 class SysLogReceiver(QObject):
 #	data_received = pyqtSignal(str)
 	interruptSysLog = pyqtSignal()
@@ -107,10 +112,33 @@ class TabSysLog(QWidget):
 		self.txtPidFilter = QLineEdit("-1")
 		self.txtPidFilter.setValidator(validator)
 		
+		self.cmbPid = QComboBox()
+		self.cmbPid.setEditable(True)
+		
+		self.my_processes = {str("-1"): "(No Filter)"}
+		self.cmbPid.addItem("-1 (NO Filter)")
+#		self.my_processes.update({str("-1"): "(No Filter)"})
+		
+		devices = select_devices_by_connection_type(connection_type='USB', usbmux_address=usbmux_address)
+		if len(devices) <= 1:
+#			print(OsTraceService(lockdown=create_using_usbmux(usbmux_address=usbmux_address)).get_pid_list())
+			processes_list = OsTraceService(lockdown=create_using_usbmux(usbmux_address=usbmux_address)).get_pid_list().get('Payload')
+			for pid, process_info in processes_list.items():
+				process_name = process_info.get('ProcessName')
+				print(f'{pid} ({process_name})')
+				self.cmbPid.addItem(f'{pid} ({process_name})')
+				self.my_processes.update({str(pid): process_name})
+#			for processes_id in OsTraceService(lockdown=create_using_usbmux(usbmux_address=usbmux_address)).get_pid_list().get('Payload'):
+#				print(processes_id.values())
+#				print(processes_id)
+##				self.cmbPid.addItem(f'{processes_lid} ({processes_name})')
+##				self.cmbPid.addItem("100 (usermanagerd)")
+		
 		self.textLog = LogginOutput(parent)
 		self.setLayout(QVBoxLayout())
 		self.gbFilter.layout().addWidget(self.lblPidFiler)
-		self.gbFilter.layout().addWidget(self.txtPidFilter)
+#		self.gbFilter.layout().addWidget(self.txtPidFilter)
+		self.gbFilter.layout().addWidget(self.cmbPid)
 		self.layout().addWidget(self.gbFilter)
 		
 		self.gbLog = QGroupBox("SysLog")
