@@ -11,7 +11,8 @@ import pyperclip
 import datetime
 
 from pyqtHelper import human_readable_size
-from pyqtDialog import InputDialog
+#from pyqtDialog import InputDialog
+from helper.pyqtDialog import *
 
 usbmux_address = None
 
@@ -40,12 +41,13 @@ class AFCWorker(QRunnable):
 		self.runAFCLs()
 		
 	def runAFCLs(self):
+		QCoreApplication.processEvents()
 		if self.isAFCActive:
 			interruptFCActive = True
 			return
 		else:
 			interruptFCActive = False
-			
+		QCoreApplication.processEvents()	
 		self.isAFCActive = True
 		devices = select_devices_by_connection_type(connection_type='USB', usbmux_address=usbmux_address)
 #		print(f"usbmux_address: {usbmux_address}")
@@ -75,6 +77,7 @@ def afc_mkdir(service_provider: LockdownClient, foldername: str, remote_file = '
 	sp = AfcService(lockdown=service_provider)
 	
 	sp.makedirs(remote_file + foldername)
+	return sp.stat(remote_file + foldername)
 #	afc_ls_proccess_dir(sp, root_item, remote_file, recursive, False)
 	
 def afc_ls(service_provider: LockdownClient, root_item: QTreeWidgetItem, remote_file = '/', recursive = False):
@@ -89,9 +92,14 @@ def afc_ls(service_provider: LockdownClient, root_item: QTreeWidgetItem, remote_
 	sp = AfcService(lockdown=service_provider)
 	afc_ls_proccess_dir(sp, root_item, remote_file, recursive, False)
 	
+def afc_rm(service_provider: LockdownClient, remote_file):
+	""" remove a file rooted at /var/mobile/Media """
+	AfcService(lockdown=service_provider).rm(remote_file)
+	
 def afc_ls_proccess_dir(sp: AfcService, root_item: QTreeWidgetItem, remote_file = '/', recursive = False, subDir = False):
 	for path in sp.dirlist(remote_file, -1 if recursive else 1):
 		if(path != remote_file):
+			QCoreApplication.processEvents()
 			if interruptFCActive:
 				break
 			formatted_string = str(sp.stat(path)["st_birthtime"])
@@ -129,6 +137,7 @@ class AFCTreeWidget(QTreeWidget):
 		actionRefresh = self.context_menu.addAction("Refresh")
 		
 		actionCopyPath.triggered.connect(self.actionCopyPath_triggered)
+		actionDeleteFile.triggered.connect(self.actionDeleteFile_triggered)
 		actionCreateDir.triggered.connect(self.actionCreateDir_triggered)
 		actionRefresh.triggered.connect(self.actionRefresh_triggered)
 #		self.parent_window = self.window()
@@ -166,24 +175,64 @@ class AFCTreeWidget(QTreeWidget):
 	def actionRefresh_triggered(self):
 #		wind:Pymobiledevice3GUIWindow = self.window()
 		self.window().start_workerAFC()
+		
+	def actionDeleteFile_triggered(self):
+		selected_items = self.selectedItems()
+		
+		if selected_items:
+			first_selected_item = selected_items[0]
+			if first_selected_item.text(0) != '/':
+				dlg = QMessageBox(self)
+				dlg.setWindowTitle(f"Delete '{first_selected_item.text(0)}'?")
+				dlg.setText(f"Do you really want to delete '{first_selected_item.text(0)}'?")
+				dlg.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+				dlg.setIcon(QMessageBox.Icon.Question)
+				button = dlg.exec()
+		
+				if button == QMessageBox.StandardButton.Yes:
+					print("Yes!")
+					devices = select_devices_by_connection_type(connection_type='USB', usbmux_address=usbmux_address)
+					if len(devices) <= 1:
+						current_item = first_selected_item
+						path_to_copy = ("/" if current_item.text(0) != "/" else "") + current_item.text(0)
+						while current_item.parent() != None:
+							current_item = current_item.parent()
+							if current_item.text(0) != "/":
+								path_to_copy = "/" + current_item.text(0) + path_to_copy
+						
+						if path_to_copy != '/':
+							afc_rm(create_using_usbmux(usbmux_address=usbmux_address), path_to_copy)
+							if first_selected_item.parent() != None:
+								first_selected_item.parent().removeChild(first_selected_item)
+			#				wind:Pymobiledevice3GUIWindow = self.window()
+			#				self.window().start_workerAFC()	
+				else:
+					print("No!")
+					
+	def getPathForItem(self, current_item: QTreeWidgetItem):
+		path_to_copy = ''
+		try:
+	#		current_item = first_selected_item
+			path_to_copy = ("/" if current_item.text(0) != "/" else "") + current_item.text(0)
+			while current_item.parent() != None:
+				current_item = current_item.parent()
+				if current_item.text(0) != "/":
+					path_to_copy = "/" + current_item.text(0) + path_to_copy
+		except Exception as e:
+			pass
+		return path_to_copy
 	
 	def actionCopyPath_triggered(self):
 		selected_items = self.selectedItems()
 		
 		if selected_items:
 			first_selected_item = selected_items[0]
-			current_item = first_selected_item
-			path_to_copy = ("/" if current_item.text(0) != "/" else "") + current_item.text(0)
-			while current_item.parent() != None:
-				current_item = current_item.parent()
-				if current_item.text(0) != "/":
-					path_to_copy = "/" + current_item.text(0) + path_to_copy
-					
-		pyperclip.copy(path_to_copy)
-		
-		if isinstance(self.window(), QMainWindow):
-			self.window().updateStatusBar(f"Copied path: '{path_to_copy}' to clipboard ...")
-		pass
+			path_to_copy = self.getPathForItem(first_selected_item)		
+			pyperclip.copy(path_to_copy)
+			
+			if isinstance(self.window(), QMainWindow):
+				self.window().updateStatusBar(f"Copied path: '{path_to_copy}' to clipboard ...")
+			pass
 	
 	def actionCreateDir_triggered(self):
 		selected_items = self.selectedItems()
@@ -191,10 +240,35 @@ class AFCTreeWidget(QTreeWidget):
 			first_selected_item = selected_items[0]
 			print(first_selected_item.text(0))
 			
-			self.window().inputDialog = InputDialog("Enter folder name", "Please enter a name for the new folder", self.getNewFolderNameCallback)
-			self.window().inputDialog.setModal(True)
-			self.window().inputDialog.show()
-			self.window().inputDialog.raise_()
+			text, ok = QInputDialog().getText(self, "Enter folder name!", "Enter new folder name:", QLineEdit.EchoMode.Normal, "")
+			if ok and text:
+				if text != '':
+					print(text)
+					path_to_create_folder = self.getPathForItem(first_selected_item)
+					if path_to_create_folder != '':
+						devices = select_devices_by_connection_type(connection_type='USB', usbmux_address=usbmux_address)
+						if len(devices) <= 1:
+							sp_stat = afc_mkdir(create_using_usbmux(usbmux_address=usbmux_address), text, path_to_create_folder)
+#							QCoreApplication.processEvents()
+#							if interruptFCActive:
+#								break
+							formatted_string = str(sp_stat["st_birthtime"])
+							try:
+								date = datetime.datetime.strptime(formatted_string, "%Y-%m-%d %H:%M:%S.%f")
+								formatted_string = date.strftime("%Y-%m-%d %H:%M:%S")
+							except Exception as e:
+								pass
+								
+							child1_item = QTreeWidgetItem(first_selected_item, [text, str(human_readable_size(sp_stat["st_size"])), formatted_string])
+#							first_selected_item.addChild(<#child#>)
+#							child1_item = QTreeWidgetItem(first_selected_item, text, '', '')
+				
+#				textLabel.setText(text)
+				
+#			self.window().inputDialog = InputDialog("Enter folder name", "Please enter a name for the new folder", self.getNewFolderNameCallback)
+#			self.window().inputDialog.setModal(True)
+#			self.window().inputDialog.show()
+#			self.window().inputDialog.raise_()
 	
 	def getNewFolderNameCallback(self, success, result):
 		print(f'In getNewFolderNameCallback => success: {success} / result: {result}')

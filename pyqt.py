@@ -34,6 +34,8 @@ from pyqtDiagnostics import *
 from pyqtSysLog import *
 from pyqtTunnel import *
 
+from helper import pyqtDialog
+
 ERROR_MSG = "ERROR"
 WINDOW_SIZE = 620
 DISPLAY_HEIGHT = 35
@@ -109,6 +111,15 @@ class Pymobiledevice3GUIWindow(QMainWindow):
         self.gbDevices.setLayout(QHBoxLayout())
         self.gbDevices.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Maximum)
         self.gbDevices.layout().addWidget(self.combobox)
+        
+        self.optUSB = QRadioButton("USB")
+        self.optUSB.setChecked(True)
+        self.optUSB.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Maximum)
+        self.gbDevices.layout().addWidget(self.optUSB)
+        
+        self.optNet = QRadioButton("Network")
+        self.optNet.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Maximum)
+        self.gbDevices.layout().addWidget(self.optNet)
         
         self.generalLayout = QVBoxLayout()
         self.buttonMap = QPushButton("TeSet")
