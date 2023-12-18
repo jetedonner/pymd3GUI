@@ -125,7 +125,7 @@ def afc_ls_proccess_dir(sp: AfcService, root_item: QTreeWidgetItem, remote_file 
 			print(path)
 			print(sp.stat(path))
 			sp_stat = sp.stat(path)
-			child1_item = QTreeWidgetItem(root_item, [path[len(remote_file) + (1 if subDir else 0):], str(human_readable_size(sp_stat["st_size"])), formateDateTime(sp_stat["st_birthtime"]), formateDateTime(sp_stat["st_mtime"]), str(sp_stat["st_ifmt"])])
+			child1_item = QTreeWidgetItem(root_item, [path[len(remote_file) + (1 if subDir else 0):], str(human_readable_size(sp_stat["st_size"])), formateDateTime(sp_stat["st_birthtime"]), formateDateTime(sp_stat["st_mtime"]), str(sp_stat["st_ifmt"]), str(sp_stat["st_nlink"]), str(sp_stat["st_blocks"])])
 			if sp.isdir(path):
 				child1_item.setIcon(0, IconHelper.getFolderIcon())
 				afc_ls_proccess_dir(sp, child1_item, path, recursive, True, sendProgressUpdate)
@@ -305,7 +305,7 @@ class AFCTreeWidget(QTreeWidget):
 						
 						if afc_push(lockdown, pathToLocalFile, remotePath):
 							sp_stat = afcService.stat(remotePath + "/" + localFilename)
-							child1_item = QTreeWidgetItem(selected_item, [localFilename, str(human_readable_size(sp_stat["st_size"])), formateDateTime(sp_stat["st_birthtime"]), formateDateTime(sp_stat["st_mtime"]), str(sp_stat["st_ifmt"])])
+							child1_item = QTreeWidgetItem(selected_item, [localFilename, str(human_readable_size(sp_stat["st_size"])), formateDateTime(sp_stat["st_birthtime"]), formateDateTime(sp_stat["st_mtime"]), str(sp_stat["st_ifmt"]), str(sp_stat["st_nlink"]), str(sp_stat["st_blocks"])])
 							
 							if afcService.isdir(remotePath + "/" + localFilename):
 								child1_item.setIcon(0, iconFolder)
@@ -401,7 +401,7 @@ class AFCTreeWidget(QTreeWidget):
 						devices = select_devices_by_connection_type(connection_type='USB', usbmux_address=usbmux_address)
 						if len(devices) <= 1:
 							sp_stat = afc_mkdir(create_using_usbmux(usbmux_address=usbmux_address), text, path_to_create_folder)
-							child1_item = QTreeWidgetItem(selected_item, [text, str(human_readable_size(sp_stat["st_size"])), formateDateTime(sp_stat["st_birthtime"]), formateDateTime(sp_stat["st_mtime"]), str(sp_stat["st_ifmt"])])
+							child1_item = QTreeWidgetItem(selected_item, [text, str(human_readable_size(sp_stat["st_size"])), formateDateTime(sp_stat["st_birthtime"]), formateDateTime(sp_stat["st_mtime"]), str(sp_stat["st_ifmt"]), str(sp_stat["st_nlink"]), str(sp_stat["st_blocks"])])
 	
 	def saveFileContentCallback(self, success, filepath, result):
 		print(f'In saveFileContentCallback => success: {success} / result: {result}')
@@ -431,9 +431,9 @@ class TabAFC(QWidget):
 		self.gbBrowser.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Minimum)
 		
 		self.tree_widget = AFCTreeWidget()
-		self.tree_widget.setHeaderLabels(['File/Folder', 'Size', 'Created', 'Modified', 'Type'])
+		self.tree_widget.setHeaderLabels(['File/Folder', 'Size', 'Created', 'Modified', 'Type', 'Links', 'Blocks'])
 		
-		self.root_item = QTreeWidgetItem(self.tree_widget, ['/', '', '/var/mobile/Media', '', ''])
+		self.root_item = QTreeWidgetItem(self.tree_widget, ['/', '', '/var/mobile/Media', '', '', '', ''])
 		
 		# Expand the root item
 		self.tree_widget.expandItem(self.root_item)

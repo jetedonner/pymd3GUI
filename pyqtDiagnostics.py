@@ -7,6 +7,7 @@ from pymobiledevice3.lockdown import LockdownClient, create_using_usbmux
 from pymobiledevice3.cli.cli_common import Command, print_json, default_json_encoder
 from pymobiledevice3.services.diagnostics import DiagnosticsService
 
+from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import *
 
 usbmux_address = None
@@ -110,7 +111,7 @@ class TabDiagnostics(QWidget):
 		
 		self.InfoGP = QGroupBox("Infos")
 		self.InfoGP.setLayout(QVBoxLayout())
-		self.cmdGetInfos = QPushButton("Infos")
+		
 		
 		def getInfosClickedHandler():
 			# usbmux_address = None
@@ -118,10 +119,18 @@ class TabDiagnostics(QWidget):
 			if len(devices) <= 1:
 				my_dict = diagnostics_info(create_using_usbmux(usbmux_address=usbmux_address), True)
 				self.textInfos.setPlainText(json.dumps(my_dict, indent=2))
-				
-		self.cmdGetInfos.clicked.connect(getInfosClickedHandler)
+		
 		self.hInfoButtonsLayout = QHBoxLayout()
-		self.hInfoButtonsLayout.addWidget(self.cmdGetInfos)
+		self.hInfoButtonsLayout.addStretch()
+		
+		self.lblQueryDevice = QLabel("Query Device:")
+		self.lblQueryDevice.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Maximum)
+		self.hInfoButtonsLayout.addWidget(self.lblQueryDevice, Qt.AlignmentFlag.AlignRight)
+		
+		self.cmdGetInfos = QPushButton("Infos")
+		self.cmdGetInfos.clicked.connect(getInfosClickedHandler)
+		self.cmdGetInfos.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Maximum)
+		self.hInfoButtonsLayout.addWidget(self.cmdGetInfos, Qt.AlignmentFlag.AlignRight)
 		
 		self.cmdGetBaterry = QPushButton("Battery")
 		
@@ -132,8 +141,8 @@ class TabDiagnostics(QWidget):
 				self.textInfos.setPlainText(json.dumps(my_dict, indent=2, default=default_json_encoder))
 				
 		self.cmdGetBaterry.clicked.connect(getBatteryClickedHandler)
-		
-		self.hInfoButtonsLayout.addWidget(self.cmdGetBaterry)
+		self.cmdGetBaterry.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Maximum)
+		self.hInfoButtonsLayout.addWidget(self.cmdGetBaterry, Qt.AlignmentFlag.AlignRight)
 		
 		self.cmdGetMG = QPushButton("Mobile-Gestalt")
 		
@@ -146,7 +155,8 @@ class TabDiagnostics(QWidget):
 				self.textInfos.setPlainText(json.dumps(my_dict, skipkeys=True, indent=2, default=default_json_encoder))
 				
 		self.cmdGetMG.clicked.connect(getMGClickedHandler)
-		self.hInfoButtonsLayout.addWidget(self.cmdGetMG)
+		self.cmdGetMG.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Maximum)
+		self.hInfoButtonsLayout.addWidget(self.cmdGetMG, Qt.AlignmentFlag.AlignRight)
 		
 		self.cmdGetIO = QPushButton("IO-Registry")
 		
@@ -159,7 +169,8 @@ class TabDiagnostics(QWidget):
 				# self.textInfos.setPlainText(json.dumps(my_dict, indent=2))
 				
 		self.cmdGetIO.clicked.connect(getIOClickedHandler)
-		self.hInfoButtonsLayout.addWidget(self.cmdGetIO)
+		self.cmdGetIO.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Maximum)
+		self.hInfoButtonsLayout.addWidget(self.cmdGetIO, Qt.AlignmentFlag.AlignRight)
 		
 		self.hInfoButtonsWidget = QWidget()
 		self.hInfoButtonsWidget.setLayout(self.hInfoButtonsLayout)

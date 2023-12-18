@@ -37,17 +37,31 @@ class GeneralWorker(QRunnable):
 	def runGeneral(self):
 		itemsCount = len(self.lockdownClientExt.all_domains)
 		idx = 0
-		for item in self.lockdownClientExt.all_domains:
-			idx += 1
-			newPrgVal = int(idx/itemsCount*100)
-			self.signals.sendProgressUpdate.emit(int(newPrgVal))
-			QCoreApplication.processEvents()
+#		print(f'AllValues: {self.lockdownClientExt.all_domains}')
+		allDom = self.lockdownClientExt.all_domains
+		for item in self.lockdownClientExt.all_domains.keys():
+			daVal = allDom[item]
+			print(f"item: {item}, key: {daVal}")
 			try:
-				valForKey = str(lockdown_get(self.lockdownClientExt, "", item, True))
-				self.my_dict.update({str(item): valForKey})
+				valForKey = daVal
+				#				item.keys()
+#				valForKey = str(lockdown_get(self.lockdownClientExt, "", item, True))
+				self.my_dict.update({str(item): str(valForKey)})
 			except Exception as e:
 				self.my_dict.update({str(item): "<Error>"})
 				continue
+#		for item in self.lockdownClientExt.all_domains:
+#			idx += 1
+#			newPrgVal = int(idx/itemsCount*100)
+#			self.signals.sendProgressUpdate.emit(int(newPrgVal))
+#			QCoreApplication.processEvents()
+#			try:
+##				item.keys()
+#				valForKey = str(lockdown_get(self.lockdownClientExt, "", item, True))
+#				self.my_dict.update({str(item): valForKey})
+#			except Exception as e:
+#				self.my_dict.update({str(item): "<Error>"})
+#				continue
 				
 		self.signals.finished.emit(self.my_dict)
 		
