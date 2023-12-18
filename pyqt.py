@@ -286,11 +286,11 @@ def main():
     pymobiledevice3GUIApp = QApplication([])
     pymobiledevice3GUIApp.aboutToQuit.connect(close_application)
     # Load the icon file
-    icon_path = os.path.join('resources', 'app_icon.png')
-    icon = QPixmap(icon_path)
+#   icon_path = os.path.join('resources', 'app_icon.png')
+#   icon = QPixmap(icon_path)
     IconHelper.initIcons()
     # Set the app icon
-    pymobiledevice3GUIApp.setWindowIcon(QIcon(icon))
+    pymobiledevice3GUIApp.setWindowIcon(IconHelper.iconApp) #QIcon(icon))
 
     pymobiledevice3GUIWindow = Pymobiledevice3GUIWindow()
     pymobiledevice3GUIWindow.show()

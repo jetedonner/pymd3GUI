@@ -122,6 +122,6 @@ class FileContentDialog(QDialog):
 		self.close()
 		
 	def confirmInput(self):
-		input = self.findChild(QTextEdit).toPlainText()
+		input = self.txtMultiline.toPlainText()
 		self.inputCallback(True, self.path_to_open, input)
 		self.close()

@@ -6,7 +6,7 @@ from os import getcwd, path
 
 
 
-from PyQt6.QtGui import QIcon
+from PyQt6.QtGui import QIcon, QPixmap
 
 #iconFolder = None # QIcon(os.path.join('resources', 'folder.png'))
 #iconFile = None # QIcon(os.path.join('resources', 'file.png'))
@@ -20,17 +20,23 @@ from PyQt6.QtGui import QIcon
 	
 class IconHelper():
 	
+	iconApp = None
 	iconFolder = None
 	iconFile = None
 	
 	@staticmethod
 	def initIcons():
-#		project_root = path.join(getcwd(), '../pyqt.py')
 		project_root = dirname(realpath(__file__))
-		print(project_root)
+#		print(project_root)
+		IconHelper.iconApp = QIcon(QPixmap(os.path.join(project_root, '..', 'resources', 'app_icon.png')))
 		IconHelper.iconFolder = QIcon(os.path.join(project_root, '..', 'resources', 'folder.png'))
 		IconHelper.iconFile = QIcon(os.path.join(project_root, '..', 'resources', 'file.png'))
-		
+#		iconApp = QPixmap(icon_path)
+	
+	@staticmethod
+	def getAppIcon():
+		return IconHelper.iconApp
+	
 	@staticmethod
 	def getFolderIcon():
 		return IconHelper.iconFolder
