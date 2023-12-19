@@ -9,10 +9,18 @@ from PyQt6.QtCore import *
 from PyQt6.QtGui import QIntValidator, QColor
 from PyQt6.QtWidgets import *
 
+from pyqtDeviceHelper import *
+
 usbmux_address = None
 
 autoScrollSysLog = True
 
+class MyComboBoxStyle(QStyle):
+	
+	def drawFocus(self, painter, option, rect):
+		# Disable focus rectangle
+		painter.setBrush(Qt.BrushStyle.NoBrush)
+		
 def processes_ps(service_provider: LockdownClient):
 	""" show process list """
 	return OsTraceService(lockdown=service_provider).get_pid_list().get('Payload')
@@ -40,9 +48,11 @@ class SysLogWorker(QRunnable):
 		
 	def runSysLog(self):
 		self.isSysLogActive = True
-		devices = select_devices_by_connection_type(connection_type='USB', usbmux_address=usbmux_address)
-		if len(devices) <= 1:
-			for syslog_entry in OsTraceService(lockdown=create_using_usbmux(usbmux_address=usbmux_address)).syslog(pid=-1):
+#		devices = select_devices_by_connection_type(connection_type='USB', usbmux_address=usbmux_address)
+#		if len(devices) <= 1:
+		result, lockdown = lockdownForFirstDevice()
+		if result:
+			for syslog_entry in OsTraceService(lockdown=lockdown).syslog(pid=-1):
 #				print(syslog_entry.timestamp)
 				self.signals.sendSysLog.emit(str(syslog_entry.timestamp), "green")
 				self.signals.sendSysLog.emit(str(syslog_entry.message), "white")
@@ -56,6 +66,19 @@ class SysLogWorker(QRunnable):
 	def handle_interruptSysLog(self):
 #		print(f"Received interrupt in the sysLog worker thread")
 		self.isSysLogActive = False
+
+class MyComboBoxStyledItemDelegate(QStyledItemDelegate):
+	
+	def paint(self, painter, option, index):
+		print("paint ...")
+		# Check if the item is focused
+		if option.state & QStyle.StateFlag.State_HasFocus:
+			# Disable focus rectangle
+			print("Has focus ...")
+			painter.setBrush(Qt.BrushStyle.NoBrush)
+			
+		# Otherwise, use the default paint method
+		super().paint(painter, option, index)
 		
 class LogginOutput(QTextEdit):
 	
@@ -114,18 +137,23 @@ class TabSysLog(QWidget):
 		
 		self.cmbPid = QComboBox()
 		self.cmbPid.setEditable(True)
+		self.cmbPid.setAttribute(Qt.WidgetAttribute.WA_MacShowFocusRect, 0)
 		
 		self.my_processes = {str("-1"): "(No Filter)"}
-		self.cmbPid.addItem("-1 (NO Filter)")
+#		self.cmbPid.setStyle(MyComboBoxStyle())
+		self.cmbPid.setItemDelegate(MyComboBoxStyledItemDelegate())
+		self.cmbPid.setStyleSheet("QComboBox { selection-background-color: #ccc; }")
 		
-		devices = select_devices_by_connection_type(connection_type='USB', usbmux_address=usbmux_address)
-		if len(devices) <= 1:
-			processes_list = OsTraceService(lockdown=create_using_usbmux(usbmux_address=usbmux_address)).get_pid_list().get('Payload')
+		result, lockdown = lockdownForFirstDevice()
+		if result:
+			processes_list = OsTraceService(lockdown=lockdown).get_pid_list().get('Payload')
 			for pid, process_info in processes_list.items():
 				process_name = process_info.get('ProcessName')
 #				print(f'{pid} ({process_name})')
 				self.cmbPid.addItem(f'{pid} ({process_name})')
 				self.my_processes.update({str(pid): process_name})
+		else:
+			print("No device detected!")
 				
 		self.textLog = LogginOutput(parent)
 		self.setLayout(QVBoxLayout())

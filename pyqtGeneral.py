@@ -10,6 +10,7 @@ from PyQt6.QtCore import *
 from PyQt6.QtWidgets import *
 
 from BasicInfoTableWidget import *
+from pyqtDeviceHelper import *
 
 usbmux_address = None
 
@@ -35,13 +36,18 @@ class GeneralWorker(QRunnable):
 		self.runGeneral()
 		
 	def runGeneral(self):
-		itemsCount = len(self.lockdownClientExt.all_domains)
+		allDom = self.lockdownClientExt.all_domains
+		itemsCount = len(allDom.keys())
 		idx = 0
 #		print(f'AllValues: {self.lockdownClientExt.all_domains}')
-		allDom = self.lockdownClientExt.all_domains
-		for item in self.lockdownClientExt.all_domains.keys():
+		
+		for item in allDom.keys():
+			idx += 1
+			newPrgVal = int(idx/itemsCount*100)
+			self.signals.sendProgressUpdate.emit(int(newPrgVal))
+			QCoreApplication.processEvents()
 			daVal = allDom[item]
-			print(f"item: {item}, key: {daVal}")
+#			print(f"item: {item}, key: {daVal}")
 			try:
 				valForKey = daVal
 				#				item.keys()
@@ -147,15 +153,21 @@ class TabGeneral(QWidget):
 		
 		self.lockdownClient = usbmux_list(usbmux_address, True, True, False)
 #		self.tblBasicInfos.loadBasicInfoFromLockdownClient(lockdownClient)
-		self.my_dict = {}
+#		self.my_dict = {}
 				
-		self.tblBasicInfos.loadBasicInfoFromLockdownClient(self.lockdownClient)
+#		self.tblBasicInfos.loadBasicInfoFromLockdownClient(self.lockdownClient)
+		self.loadData()
 	
+	def loadData(self):
+		self.my_dict = {}
+		self.tblBasicInfos.loadBasicInfoFromLockdownClient(self.lockdownClient)
+		
 	def optBasicToggled(self, state):
 		QCoreApplication.processEvents()
 		if(state):
+			self.gbBasic.setTitle("Basic infos")
 			self.window().updateStatusBar("Loading basic device infos ...")
-			self.lockdownClient = usbmux_list(usbmux_address, True, True, False)
+			self.lockdownClient = usbmux_list("/var/run/usbmuxd", True, True, False)
 			QCoreApplication.processEvents()
 			self.tblBasicInfos.loadBasicInfoFromLockdownClient(self.lockdownClient)
 		pass
@@ -163,13 +175,18 @@ class TabGeneral(QWidget):
 	def optExtToggled(self, state):
 		QCoreApplication.processEvents()
 		if(state):
+			self.gbBasic.setTitle("Extended infos")
+			self.window().updateProgress(25)
+			QCoreApplication.processEvents()
 			self.my_dict = {}
-			devices = select_devices_by_connection_type(connection_type='USB', usbmux_address=usbmux_address)
-			if len(devices) <= 1:
-				LockdownClientExt = create_using_usbmux(usbmux_address=usbmux_address)
-				QCoreApplication.processEvents()
+#			devices = select_devices_by_connection_type(connection_type='USB', usbmux_address=usbmux_address)
+#			if len(devices) <= 1:
+			result, lockdown = lockdownForFirstDevice()
+			if result:
+#				LockdownClientExt = lockdown
 				self.window().updateStatusBar("Loading extended device infos ...")
-				self.window().start_workerGeneral(LockdownClientExt)
+				QCoreApplication.processEvents()
+				self.window().start_workerGeneral(lockdown)
 		pass
 
 

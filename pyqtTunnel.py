@@ -1,12 +1,17 @@
 #!/usr/bin/env python3
 
+import subprocess
+import sys
+
 from pymobiledevice3.usbmux import select_devices_by_connection_type
 from pymobiledevice3.lockdown import LockdownClient, create_using_usbmux
 #from pymobiledevice3.services.afc import AfcService, AfcShell, afc_opcode_t, afc_read_dir_req_t, afc_header_t
 
 from PyQt6.QtCore import *
-
+from PyQt6.QtGui import *
 from PyQt6.QtWidgets import *
+
+from pyqtDeviceHelper import *
 
 #import pyperclip
 #
@@ -143,8 +148,41 @@ usbmux_address = None
 #		if isinstance(self.window(), QMainWindow):
 #			self.window().updateStatusBar(f"Copied path: '{path_to_copy}' to clipboard ...")
 #		pass
+
+class SubprocessThread(QThread):
+	def __init__(self, cmd):
+		super().__init__()
+		self.cmd = cmd
+		self.process = None
+		self.stopped = True
+		self.output = ""
+		
+	def run(self):
+		self.process = subprocess.Popen(self.cmd, stdout=subprocess.PIPE)
+		while True:
+			if not self.stopped:
+				try:
+					output = self.process.stdout.readline().decode('utf-8')
+					with mutex:
+						print("Output: {output}")
+#						textEdit.append(output)
+						self.output += output
+						
+					if not output:
+						if self.process.poll() != None:
+							break
+				except:
+					# Catch any exceptions and kill the process
+					self.process.kill()
+					break
+				
+	def stop(self):
+		self.stopped = True
+		self.process.terminate()
 		
 class TabTunnel(QWidget):
+	
+	tunnelCreated:bool = False
 	
 	def __init__(self, parent=None):
 		super().__init__(parent)
@@ -152,14 +190,124 @@ class TabTunnel(QWidget):
 		self.setLayout(QVBoxLayout())
 		
 		self.gbCtrl = QGroupBox("Tunnel control")
-		self.gbCtrl.setLayout(QVBoxLayout())
+		self.gbCtrl.setLayout(QHBoxLayout())
+		
+		self.layCtrlInnerSudo = QVBoxLayout()
+		self.widCtrlInnerSudo = QWidget()
+		self.widCtrlInnerSudo.setLayout(self.layCtrlInnerSudo)
+		
+		self.layCtrlInnerHost = QVBoxLayout()
+		self.widCtrlInnerHost = QWidget()
+		self.widCtrlInnerHost.setLayout(self.layCtrlInnerHost)
+		
+		self.layCtrlInnerPort = QVBoxLayout()
+		self.widCtrlInnerPort = QWidget()
+		self.widCtrlInnerPort.setLayout(self.layCtrlInnerPort)
+		
+		self.lblPassword = QLabel("Sudu password (required):")
+		
+		self.txtSudoPassword = QLineEdit()
+		self.txtSudoPassword.setEchoMode(QLineEdit.EchoMode.Password)
+		self.txtSudoPassword.setAttribute(Qt.WidgetAttribute.WA_MacShowFocusRect, 0)
+		self.txtSudoPassword.setPlaceholderText("Enter sudo password ...")
+#		self.txtSudoPassword.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Maximum)
+		self.layCtrlInnerSudo.addWidget(self.lblPassword)
+		self.layCtrlInnerSudo.addWidget(self.txtSudoPassword)
+		
+		self.lblHost = QLabel("Host (optional):")
+		
+		self.txtHost = QLineEdit()
+		self.txtHost.setAttribute(Qt.WidgetAttribute.WA_MacShowFocusRect, 0)
+#		self.txtHost.setEchoMode(QLineEdit.EchoMode.Password)
+		self.txtHost.setPlaceholderText("Hostname (optional)")
+#		self.txtSudoPassword.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Maximum)
+		self.layCtrlInnerHost.addWidget(self.lblHost)
+		self.layCtrlInnerHost.addWidget(self.txtHost)
+		
+		self.lblPort = QLabel("Port (optional):")
+		
+		self.txtPort = QLineEdit()
+		self.txtPort.setAttribute(Qt.WidgetAttribute.WA_MacShowFocusRect, 0)
+#		self.txtHost.setEchoMode(QLineEdit.EchoMode.Password)
+		self.txtPort.setPlaceholderText("Port (optional)")
+		self.portValidator = QIntValidator(0, 65535)
+		self.txtPort.setValidator(self.portValidator)
+		
+#		self.txtSudoPassword.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Maximum)
+		self.layCtrlInnerPort.addWidget(self.lblPort)
+		self.layCtrlInnerPort.addWidget(self.txtPort)
+		
+		self.chkDeamonize = QCheckBox("Deamonize")
+#		self.chkDeamonize.stateChanged.connect(self.chkDeamonize_changed)
+#		self.layCtrl.addWidget(self.chkDeamonize)
+		
+		self.cmdStartTunnel = QPushButton("Create tunnel service")
+		self.cmdStartTunnel.clicked.connect(self.cmdStartTunnel_clicked)
+		
+		self.gbCtrl.layout().addWidget(self.widCtrlInnerSudo)
+		self.gbCtrl.layout().addWidget(self.widCtrlInnerHost)
+		self.gbCtrl.layout().addWidget(self.widCtrlInnerPort)
+		self.gbCtrl.layout().addWidget(self.chkDeamonize)
+		self.gbCtrl.layout().addWidget(self.cmdStartTunnel)
+#		self.gbCtrl.layout().addWidget(self.txtSudoPassword)
 		
 		self.gbConsole = QGroupBox("Console output")
 		self.gbConsole.setLayout(QHBoxLayout())
 		self.gbConsole.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
 		
+		self.txtConsole = QTextEdit()
+		self.txtConsole.setReadOnly(True)
+		self.txtConsole.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+		self.gbConsole.layout().addWidget(self.txtConsole)
+		
 		self.layout().addWidget(self.gbCtrl)
 		self.layout().addWidget(self.gbConsole)
+		
+		self.mutex = QMutex()
+		self.stopEvent = QWaitCondition()
+
+		self.thread = SubprocessThread(["find", "/", "python3"])
+		self.thread.start()
+
+#		self.textEdit.show()
+
+		# Start a loop to check if the user wants to abort the process
+		while True:
+			if self.thread.stopped:
+				print("Subprocess stopped")
+				break
+			else:
+				try:
+					self.exec()
+				except:
+					print("Subprocess exception catched")
+					break
+		
+	def cmdStartTunnel_clicked(self):
+		if self.tunnelCreated:
+			self.addConsoleTxt("Tunnel service removed ...")
+			self.cmdStartTunnel.setText("Create tunnel service")
+			self.tunnelCreated = False
+		else:
+			if self.txtSudoPassword.text() == "":
+				self.txtConsole.setTextColor(QColor("red"))
+				self.addConsoleTxt("No sudo password entered. Sudo is required to create tunnel!")
+				self.txtConsole.setTextColor(QColor("white"))
+				self.tunnelCreated = False
+			else:
+				self.addConsoleTxt("Tunnel service created ...")
+				self.cmdStartTunnel.setText("Remove tunnel service")
+				self.tunnelCreated = True
+		
+		self.txtSudoPassword.setEnabled(not self.tunnelCreated)
+		self.txtHost.setEnabled(not self.tunnelCreated)
+		self.txtPort.setEnabled(not self.tunnelCreated)
+		self.chkDeamonize.setEnabled(not self.tunnelCreated)
+		
+		
+	def addConsoleTxt(self, msg):
+#		self.txtConsole.document.append(msg)
+		self.txtConsole.insertPlainText(f'{msg}\n')
 #		self.tree_widget = AFCTreeWidget()
 #		self.tree_widget.setHeaderLabels(['File/Folder', 'Size', 'Created'])
 #		

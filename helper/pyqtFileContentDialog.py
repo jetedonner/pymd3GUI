@@ -1,27 +1,32 @@
 #!/usr/bin/env python3
 
 import sys
-import subprocess
+#import subprocess
+import enum
+from enum import StrEnum
+
 from PyQt6.QtWidgets import QApplication, QDialog, QLineEdit, QPushButton, QLabel, QVBoxLayout, QHBoxLayout, QWidget, QTextEdit, QComboBox, QSizePolicy, QSplitter, QCheckBox
 from PyQt6.QtCore import Qt
 
+class Encoding(StrEnum):
+	utf8 = "utf-8"
+	utf16 = "utf-16"
+	ascii = "ascii"
+	
 class FileContentDialog(QDialog):
 	
 	fileContent:bytes = None
 	
-	def __init__(self, promtTitle, promtMsg, content:bytes, path_to_open, callback):
+	def __init__(self, promtTitle, promtMsg, fileContent:bytes, path_to_open, callback):
 		super().__init__()
 		self.inputCallback = callback
 		self.path_to_open = path_to_open
-		self.fileContent = content
-#		print("Inside init MultilineTextDialog")
-		# Set the window title to "Enter Sudo Password"
+		self.fileContent = fileContent
+		
 		self.setWindowTitle(f"{promtTitle}")
 		self.setSizeGripEnabled(True)
 		self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
-		# Create a label to display the instructions
-		instructionsLabel = QLabel(f"{promtMsg}")
-#		instructionsLabel.setAlignment(Qt.AlignCenter)
+		self.instructionsLabel = QLabel(f"{promtMsg}")
 		
 		# Create a line edit to enter the password
 		self.splitter = QSplitter()
@@ -31,15 +36,11 @@ class FileContentDialog(QDialog):
 		self.txtMultiline.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Minimum)
 		self.txtMultilineHex = QTextEdit()
 		self.txtMultilineHex.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Minimum)
-		hexData = [format(byte, '02x') for byte in self.fileContent]
+		self.hexData = [format(byte, '02x') for byte in self.fileContent]
 		# Format the hexadecimal data for display
-		formattedHexData = ' '.join(hexData)
-		self.txtMultilineHex.setText(str.upper(formattedHexData))
-		self.txtMultiline.setText(content.decode("utf-8"))
-#		self.InfoGP.layout().addWidget(self.textInfos)
-		
-#		txtInput = QLineEdit()
-#		txtInput.setEchoMode(QLineEdit.EchoMode.Password)
+		self.formattedHexData = ' '.join(self.hexData)
+		self.txtMultilineHex.setText(str.upper(self.formattedHexData))
+		self.setTextWithEncoding("utf-8")
 		
 		# Create a button to confirm the password
 		self.confirmButton = QPushButton("Save")
@@ -54,21 +55,13 @@ class FileContentDialog(QDialog):
 		self.showHex.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Maximum)
 		self.showHex.setChecked(True)
 		self.showHex.stateChanged.connect(self.showHex_changed)
-#		self.layCtrl.addWidget(self.sysLogActive)
 		
 		self.cmbEncoding = QComboBox()
 		self.cmbEncoding.addItem("utf-8")
 		self.cmbEncoding.addItem("utf-16")
 		self.cmbEncoding.addItem("ascii")
-#		self.cmbEncoding.addItem("hex")
+		self.cmbEncoding.currentIndexChanged.connect(self.cmbEncoding_changed)
 		self.cmbEncoding.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Maximum)
-#		mux = usbmux.MuxConnection.create()
-#		mux.get_device_list(0.1)
-#		devices = mux.devices
-#		for device in devices:
-#			self.combobox.addItem(device.serial)
-			
-		# Create a layout to arrange the widgets
 		
 		encodingLabel = QLabel(f"Encoding:")
 		encodingLabel.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Maximum)
@@ -77,7 +70,7 @@ class FileContentDialog(QDialog):
 		widTop.setLayout(layoutTop)
 		
 		
-		layoutTop.addWidget(instructionsLabel)
+		layoutTop.addWidget(self.instructionsLabel)
 		
 		layoutTop.addWidget(encodingLabel)
 		layoutTop.addWidget(self.cmbEncoding)
@@ -109,11 +102,27 @@ class FileContentDialog(QDialog):
 		
 		# Set the size of the dialog
 		self.setMinimumSize(720, 512)
-		self.setEnabled(True)
-		# Show the dialog
-#		self.show()
-#		print("After show InputDialog")
+#		self.setEnabled(True)
 	
+	def cmbEncoding_changed(self, currentIdx:int):
+		encoding = "utf-8"
+		if currentIdx == 0:
+			encoding = "utf-8"
+		elif currentIdx == 1:
+			encoding = "utf-16"
+		elif currentIdx == 2:
+			encoding = "ascii"
+		else:
+			encoding = "utf-8"
+		self.setTextWithEncoding(encoding)
+
+	def setTextWithEncoding(self, encoding:str):
+		try:
+			self.txtMultiline.setText(self.fileContent.decode(encoding))
+		except Exception as e:
+			print(f"Exception: '{e}' while decoding fileContent with encoding '{encoding}'")
+			pass
+		
 	def showHex_changed(self, state):
 		self.splitter.widget(1).setVisible(state)
 		
@@ -122,6 +131,6 @@ class FileContentDialog(QDialog):
 		self.close()
 		
 	def confirmInput(self):
-		input = self.txtMultiline.toPlainText()
-		self.inputCallback(True, self.path_to_open, input)
+#		input = self.txtMultiline.toPlainText()
+		self.inputCallback(True, self.path_to_open, self.txtMultiline.toPlainText())
 		self.close()

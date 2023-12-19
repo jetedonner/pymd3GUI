@@ -10,7 +10,9 @@ from pymobiledevice3.services.diagnostics import DiagnosticsService
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import *
 
-usbmux_address = None
+from pyqtDeviceHelper import *
+
+#usbmux_address = None
 
 def diagnostics_restart(service_provider: LockdownClient):
 	""" restart device """
@@ -58,11 +60,9 @@ class TabDiagnostics(QWidget):
 		self.cmdRestartDevice = QPushButton("Restart Device")
 		
 		def restartClickedHandler():
-			# usbmux_address = None
-			devices = select_devices_by_connection_type(connection_type='USB', usbmux_address=usbmux_address)
-			if len(devices) <= 1:
-				diagnostics_restart(create_using_usbmux(usbmux_address=usbmux_address))
-				# print("Device is restarting ...")
+			result, lockdown = lockdownForFirstDevice()
+			if result:
+				diagnostics_restart(lockdown)
 				self.window().updateStatusBar("Device is restarting ...")
 				
 		self.cmdRestartDevice.clicked.connect(restartClickedHandler)
@@ -71,11 +71,9 @@ class TabDiagnostics(QWidget):
 		self.cmdShutdownDevice = QPushButton("Shutdown Device")
 		
 		def shutdownClickedHandler():
-			# usbmux_address = None
-			devices = select_devices_by_connection_type(connection_type='USB', usbmux_address=usbmux_address)
-			if len(devices) <= 1:
-				diagnostics_shutdown(create_using_usbmux(usbmux_address=usbmux_address))
-				# print("Device is shutting down ...")
+			result, lockdown = lockdownForFirstDevice()
+			if result:
+				diagnostics_shutdown(lockdown)
 				self.window().updateStatusBar("Device is shutting down ...")
 				
 		self.cmdShutdownDevice.clicked.connect(shutdownClickedHandler)
@@ -84,11 +82,9 @@ class TabDiagnostics(QWidget):
 		self.cmdSleepDevice = QPushButton("Sleep Device")
 		
 		def sleepClickedHandler():
-			# usbmux_address = None
-			devices = select_devices_by_connection_type(connection_type='USB', usbmux_address=usbmux_address)
-			if len(devices) <= 1:
-				diagnostics_sleep(create_using_usbmux(usbmux_address=usbmux_address))
-				# print("Device is shutting down ...")
+			result, lockdown = lockdownForFirstDevice()
+			if result:
+				diagnostics_sleep(lockdown)
 				self.window().updateStatusBar("Device is going to sleep ...")
 				
 		self.cmdSleepDevice.clicked.connect(sleepClickedHandler)
@@ -97,11 +93,9 @@ class TabDiagnostics(QWidget):
 		self.cmdEnterRecovery = QPushButton("Enter Recovery")
 		
 		def enterRecoveryClickedHandler():
-			# usbmux_address = None
-			devices = select_devices_by_connection_type(connection_type='USB', usbmux_address=usbmux_address)
-			if len(devices) <= 1:
-				create_using_usbmux(usbmux_address=usbmux_address).enter_recovery()
-				# print("Device is shutting down ...")
+			result, lockdown = lockdownForFirstDevice()
+			if result:
+				lockdown.enter_recovery()
 				self.window().updateStatusBar("Device is going to enter recovery ...")
 				
 		self.cmdEnterRecovery.clicked.connect(enterRecoveryClickedHandler)
@@ -114,10 +108,9 @@ class TabDiagnostics(QWidget):
 		
 		
 		def getInfosClickedHandler():
-			# usbmux_address = None
-			devices = select_devices_by_connection_type(connection_type='USB', usbmux_address=usbmux_address)
-			if len(devices) <= 1:
-				my_dict = diagnostics_info(create_using_usbmux(usbmux_address=usbmux_address), True)
+			result, lockdown = lockdownForFirstDevice()
+			if result:
+				my_dict = diagnostics_info(lockdown, True)
 				self.textInfos.setPlainText(json.dumps(my_dict, indent=2))
 		
 		self.hInfoButtonsLayout = QHBoxLayout()
@@ -135,9 +128,9 @@ class TabDiagnostics(QWidget):
 		self.cmdGetBaterry = QPushButton("Battery")
 		
 		def getBatteryClickedHandler():
-			devices = select_devices_by_connection_type(connection_type='USB', usbmux_address=usbmux_address)
-			if len(devices) <= 1:
-				my_dict = diagnostics_battery_single(create_using_usbmux(usbmux_address=usbmux_address), True)
+			result, lockdown = lockdownForFirstDevice()
+			if result:
+				my_dict = diagnostics_battery_single(lockdown, True)
 				self.textInfos.setPlainText(json.dumps(my_dict, indent=2, default=default_json_encoder))
 				
 		self.cmdGetBaterry.clicked.connect(getBatteryClickedHandler)
@@ -147,10 +140,9 @@ class TabDiagnostics(QWidget):
 		self.cmdGetMG = QPushButton("Mobile-Gestalt")
 		
 		def getMGClickedHandler():
-			# usbmux_address = None
-			devices = select_devices_by_connection_type(connection_type='USB', usbmux_address=usbmux_address)
-			if len(devices) <= 1:
-				my_dict = diagnostics_mg(create_using_usbmux(usbmux_address=usbmux_address), None)
+			result, lockdown = lockdownForFirstDevice()
+			if result:
+				my_dict = diagnostics_mg(lockdown, None)
 				# decoded_dict = {(key.decode() if isinstance(key, bytes) else key): ((value.decode() if isinstance(value, bytes) else value) if value != None else "") for key, value in my_dict.items()}
 				self.textInfos.setPlainText(json.dumps(my_dict, skipkeys=True, indent=2, default=default_json_encoder))
 				
@@ -161,12 +153,10 @@ class TabDiagnostics(QWidget):
 		self.cmdGetIO = QPushButton("IO-Registry")
 		
 		def getIOClickedHandler():
-			devices = select_devices_by_connection_type(connection_type='USB', usbmux_address=usbmux_address)
-			if len(devices) <= 1:
-				my_dict = diagnostics_ioregistry(create_using_usbmux(usbmux_address=usbmux_address))
-				# decoded_dict = {(key.decode() if isinstance(key, bytes) else key): ((value.decode() if isinstance(value, bytes) else value) if value != None else "") for key, value in my_dict.items()}
+			result, lockdown = lockdownForFirstDevice()
+			if result:
+				my_dict = diagnostics_ioregistry(lockdown)
 				self.textInfos.setPlainText(json.dumps(my_dict, skipkeys=True, indent=2, default=default_json_encoder))
-				# self.textInfos.setPlainText(json.dumps(my_dict, indent=2))
 				
 		self.cmdGetIO.clicked.connect(getIOClickedHandler)
 		self.cmdGetIO.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Maximum)

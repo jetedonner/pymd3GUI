@@ -34,6 +34,7 @@ from pyqtAFC import *
 from pyqtDiagnostics import *
 from pyqtSysLog import *
 from pyqtTunnel import *
+from pyqtCommunication import *
 
 from helper import *
 
@@ -67,6 +68,9 @@ class Pymobiledevice3GUIWindow(QMainWindow):
         self.setWindowTitle("pymd3GUI - GUI for pymobiledevice3")
         self.setFixedSize(WINDOW_SIZE * 2, WINDOW_SIZE)
         
+        self._createMenuBar()
+        self._createToolBars()
+        
         self.inputDialog = InputDialog("Enter folder name", "Please enter a name for the new folder", self.inputCallback)
         self.mlDialog = MultilineTextDialog("File content", "", "", "", self.inputCallback)
         self.fileContentDialog = FileContentDialog("File content", "", bytes(0), "", self.inputCallback)
@@ -94,23 +98,34 @@ class Pymobiledevice3GUIWindow(QMainWindow):
         
         self.tabWidget = QTabWidget()
         # tabWidget
-        self.combobox = QComboBox()
+        self.cmbDevices = QComboBox()
         mux = usbmux.MuxConnection.create()
         mux.get_device_list(0.1)
         devices = mux.devices
-        for device in devices:
-            self.combobox.addItem(device.serial)
+        if len(devices) >= 1:
+            for device in devices:
+                self.cmbDevices.addItem(device.serial)
+        else:
+            self.cmbDevices.addItem("<No device connected>")
 
         self.statusBar = QStatusBar()
         self.setStatusBar(self.statusBar)
 
         self.topLayout = QHBoxLayout()
-        self.combobox.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Minimum)
+        self.cmbDevices.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Minimum)
         
+        self.lblAddress = QLabel("Usbmuxd Address:")
+        self.lblAddress.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Maximum)
+        self.txtAddress = QLineEdit("/var/run/usbmuxd")
+        self.txtAddress.setAttribute(Qt.WidgetAttribute.WA_MacShowFocusRect, 0)
+        self.txtAddress.setToolTip("Specify a usbmuxd address")
+        self.txtAddress.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Maximum)
         self.gbDevices = QGroupBox("Devices")
         self.gbDevices.setLayout(QHBoxLayout())
         self.gbDevices.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Maximum)
-        self.gbDevices.layout().addWidget(self.combobox)
+        self.gbDevices.layout().addWidget(self.cmbDevices)
+        self.gbDevices.layout().addWidget(self.lblAddress)
+        self.gbDevices.layout().addWidget(self.txtAddress)
         
         self.optUSB = QRadioButton("USB")
         self.optUSB.setChecked(True)
@@ -138,6 +153,9 @@ class Pymobiledevice3GUIWindow(QMainWindow):
         
         self.tabTunnel = TabTunnel()
         self.tabWidget.addTab(self.tabTunnel, "Tunnel")
+        
+        self.tabCommunication = TabCommunication()
+        self.tabWidget.addTab(self.tabCommunication, "Communication")
         
         self.topLayout.addWidget(self.gbDevices)
 
@@ -170,6 +188,27 @@ class Pymobiledevice3GUIWindow(QMainWindow):
         
         self.updateStatusBar("Ready...")
     
+    # Snip...
+    def _createMenuBar(self):
+        menuBar = self.menuBar()
+        # Creating menus using a QMenu object
+        fileMenu = QMenu("&File", self)
+        menuBar.addMenu(fileMenu)
+        # Creating menus using a title
+        editMenu = menuBar.addMenu("&Edit")
+        helpMenu = menuBar.addMenu("&Help")
+        
+    # Snip...
+    def _createToolBars(self):
+        # Using a title
+        fileToolBar = self.addToolBar("File")
+        # Using a QToolBar object
+        editToolBar = QToolBar("Edit", self)
+        self.addToolBar(editToolBar)
+        # Using a QToolBar object and a toolbar area
+        helpToolBar = QToolBar("Help", self)
+        self.addToolBar(Qt.ToolBarArea.LeftToolBarArea, helpToolBar)
+    
     def inputCallback(self, success, result):
         print(f'In inputCallback => success: {success} / result: {result}')
 #   def showEvent(self, event):
@@ -185,7 +224,7 @@ class Pymobiledevice3GUIWindow(QMainWindow):
 #   def loadFinished(self, successful):
 #       print('in loadFinished')
 #       # Set image on QGraphicsView here, or something else that has to be done in showEvent
-#       
+#       ,,, 
 #       # Which of these is correct ??
 ##       super(MainForm, self).showEvent(event)
 #       super().loadFinished(successful)
@@ -207,16 +246,9 @@ class Pymobiledevice3GUIWindow(QMainWindow):
         worker = SysLogWorker(self.sysLog_receiver)
         worker.signals.finished.connect(self.handle_finished)
         worker.signals.sendSysLog.connect(self.handle_sendSysLog)
-#       worker.signals.sendProgressUpdate.connect(self.handle_progressUpdate)
         
-#       workerAFC = AFCWorker(self.afc_receiver, self.tabAFC.root_item)
-#       workerAFC.signals.finished.connect(self.handle_finished)
-#       workerAFC.signals.sendSysLog.connect(self.handle_sendSysLog)
-
         # Execute the worker in a separate thread
         self.threadpool.start(worker)
-#       self.threadpool.start(workerAFC)
-
         QCoreApplication.processEvents()
     
     def start_workerAFC(self):
@@ -265,7 +297,10 @@ class Pymobiledevice3GUIWindow(QMainWindow):
 
     def updateStatusBar(self, msg):
         self.statusBar.showMessage(msg)
-        self.statusBar.repaint()
+#       self.statusBar.repaint()
+        
+    def getDeviceAddress(self) -> str:
+        return self.cmbDevices.currentText()
 
 
 class PyMobiledevice3GUI:
@@ -285,16 +320,14 @@ def main():
     global pymobiledevice3GUIApp
     pymobiledevice3GUIApp = QApplication([])
     pymobiledevice3GUIApp.aboutToQuit.connect(close_application)
-    # Load the icon file
-#   icon_path = os.path.join('resources', 'app_icon.png')
-#   icon = QPixmap(icon_path)
+    
     IconHelper.initIcons()
+    
     # Set the app icon
     pymobiledevice3GUIApp.setWindowIcon(IconHelper.iconApp) #QIcon(icon))
 
     pymobiledevice3GUIWindow = Pymobiledevice3GUIWindow()
     pymobiledevice3GUIWindow.show()
-#   pymobiledevice3GUIWindow.tabGeneral.resizeGroupBox()
     PyMobiledevice3GUI(view=pymobiledevice3GUIWindow)
 
     sys.exit(pymobiledevice3GUIApp.exec())

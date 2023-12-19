@@ -18,6 +18,8 @@ from helper.pyqtMultilineTextDialog import *
 from helper.pyqtFileContentDialog import *
 from helper.pyqtIconHelper import *
 
+from pyqtDeviceHelper import *
+
 usbmux_address = None
 
 interruptFCActive = False
@@ -51,9 +53,9 @@ class AFCWorker(QRunnable):
 			interruptFCActive = False
 		QCoreApplication.processEvents()	
 		self.isAFCActive = True
-		devices = select_devices_by_connection_type(connection_type='USB', usbmux_address=usbmux_address)
-		if len(devices) <= 1:
-			afc_ls(create_using_usbmux(usbmux_address=usbmux_address), self.root_item, "/", False, self.signals.sendProgressUpdate)
+		result, lockdown = lockdownForFirstDevice()
+		if result:
+			afc_ls(lockdown, self.root_item, "/", False, self.signals.sendProgressUpdate)
 			
 		self.isAFCActive = False
 		QCoreApplication.processEvents()
@@ -122,8 +124,8 @@ def afc_ls_proccess_dir(sp: AfcService, root_item: QTreeWidgetItem, remote_file 
 				QCoreApplication.processEvents()
 			if interruptFCActive:
 				break
-			print(path)
-			print(sp.stat(path))
+#			print(path)
+#			print(sp.stat(path))
 			sp_stat = sp.stat(path)
 			child1_item = QTreeWidgetItem(root_item, [path[len(remote_file) + (1 if subDir else 0):], str(human_readable_size(sp_stat["st_size"])), formateDateTime(sp_stat["st_birthtime"]), formateDateTime(sp_stat["st_mtime"]), str(sp_stat["st_ifmt"]), str(sp_stat["st_nlink"]), str(sp_stat["st_blocks"])])
 			if sp.isdir(path):
@@ -217,10 +219,11 @@ class AFCTreeWidget(QTreeWidget):
 			
 			path_to_open = self.getPathForItem(first_selected_item)
 			if path_to_open != '':
-				devices = select_devices_by_connection_type(connection_type='USB', usbmux_address=usbmux_address)
-				if len(devices) <= 1:
-					
-					fileBytes = afc_openFile(create_using_usbmux(usbmux_address=usbmux_address), path_to_open)
+#				devices = select_devices_by_connection_type(connection_type='USB', usbmux_address=usbmux_address)
+#				if len(devices) <= 1:
+				result, lockdown = lockdownForFirstDevice()
+				if result:
+					fileBytes = afc_openFile(lockdown, path_to_open)
 					file_content = fileBytes.decode('utf-8')
 					print(file_content)
 					hexData = [format(byte, '02x') for byte in fileBytes]
@@ -247,10 +250,10 @@ class AFCTreeWidget(QTreeWidget):
 				pathToLocalDir = QFileDialog.getExistingDirectory(None, "Select a download location", "~/", QFileDialog.Option.ShowDirsOnly)
 				print(pathToLocalDir)
 				if pathToLocalDir != "":
-					devices = select_devices_by_connection_type(connection_type='USB', usbmux_address=usbmux_address)
-					if len(devices) <= 1:
+					result, lockdown = lockdownForFirstDevice()
+					if result:
 						pathToLocalFile = pathToLocalDir + "/" + selected_item.text(0)
-						if afc_pull(create_using_usbmux(usbmux_address=usbmux_address), pathToRemoteFile, pathToLocalFile):
+						if afc_pull(lockdown, pathToRemoteFile, pathToLocalFile):
 							self.window().updateStatusBar(f"Pulled file '{selected_item.text(0)}' to '{pathToLocalFile}' successfully")
 		pass
 		
@@ -260,14 +263,16 @@ class AFCTreeWidget(QTreeWidget):
 			pathToLocalFiles = QFileDialog.getOpenFileNames(None, "Select file(s) to push", "~/", "", "")
 #			print(pathToLocalFiles)
 			if len(pathToLocalFiles[0]) > 0:
-				lockdown = create_using_usbmux(usbmux_address=usbmux_address)
-				afcService = AfcService(lockdown=lockdown)
-				remotePath = self.getPathForItem(selected_item)
-				if not afcService.isdir(remotePath):
-					remotePath = os.path.dirname(remotePath)
-#				print("REMOTEPATH: " + remotePath)
-				devices = select_devices_by_connection_type(connection_type='USB', usbmux_address=usbmux_address)
-				if len(devices) <= 1:
+#				lockdown = create_using_usbmux(usbmux_address=usbmux_address)
+				result, lockdown = lockdownForFirstDevice()
+				if result:
+					afcService = AfcService(lockdown=lockdown)
+					remotePath = self.getPathForItem(selected_item)
+					if not afcService.isdir(remotePath):
+						remotePath = os.path.dirname(remotePath)
+	#				print("REMOTEPATH: " + remotePath)
+	#				result, lockdown = lockdownForFirstDevice()
+	#				if result:
 					iconFolder = QIcon(os.path.join('resources', 'folder.png'))
 					iconFile = QIcon(os.path.join('resources', 'file.png'))
 					idx = 0
@@ -344,9 +349,11 @@ class AFCTreeWidget(QTreeWidget):
 							path_to_copy = "/" + current_item.text(0) + path_to_copy
 					
 					if path_to_copy != '/':
-						devices = select_devices_by_connection_type(connection_type='USB', usbmux_address=usbmux_address)
-						if len(devices) <= 1:
-							afc_rm(create_using_usbmux(usbmux_address=usbmux_address), path_to_copy)
+#						devices = select_devices_by_connection_type(connection_type='USB', usbmux_address=usbmux_address)
+#						if len(devices) <= 1:
+						result, lockdown = lockdownForFirstDevice()
+						if result:
+							afc_rm(lockdown, path_to_copy)
 							if first_selected_item.parent() != None:
 								first_selected_item.parent().removeChild(first_selected_item)
 			#				wind:Pymobiledevice3GUIWindow = self.window()
@@ -398,25 +405,31 @@ class AFCTreeWidget(QTreeWidget):
 					path_to_create_folder = self.getPathForItem(selected_item)
 					if path_to_create_folder != '':
 						print(path_to_create_folder)
-						devices = select_devices_by_connection_type(connection_type='USB', usbmux_address=usbmux_address)
-						if len(devices) <= 1:
-							sp_stat = afc_mkdir(create_using_usbmux(usbmux_address=usbmux_address), text, path_to_create_folder)
+#						devices = select_devices_by_connection_type(connection_type='USB', usbmux_address=usbmux_address)
+#						if len(devices) <= 1:
+						result, lockdown = lockdownForFirstDevice()
+						if result:
+							sp_stat = afc_mkdir(lockdown, text, path_to_create_folder)
 							child1_item = QTreeWidgetItem(selected_item, [text, str(human_readable_size(sp_stat["st_size"])), formateDateTime(sp_stat["st_birthtime"]), formateDateTime(sp_stat["st_mtime"]), str(sp_stat["st_ifmt"]), str(sp_stat["st_nlink"]), str(sp_stat["st_blocks"])])
 	
 	def saveFileContentCallback(self, success, filepath, result):
 		print(f'In saveFileContentCallback => success: {success} / result: {result}')
 		if(success and result != ''):
-			devices = select_devices_by_connection_type(connection_type='USB', usbmux_address=usbmux_address)
-			if len(devices) <= 1:
-				afc_updateFile(create_using_usbmux(usbmux_address=usbmux_address), filepath, str(result).encode("utf-8"))
+#			devices = select_devices_by_connection_type(connection_type='USB', usbmux_address=usbmux_address)
+#			if len(devices) <= 1:
+			result, lockdown = lockdownForFirstDevice()
+			if result:
+				afc_updateFile(lockdown, filepath, str(result).encode("utf-8"))
 				self.window().updateStatusBar(f"Saved file content to: '{filepath}' ...")
 				
 	def getNewFolderNameCallback(self, success, result):
 		print(f'In getNewFolderNameCallback => success: {success} / result: {result}')
 		if(success and result != ''):
-			devices = select_devices_by_connection_type(connection_type='USB', usbmux_address=usbmux_address)
-			if len(devices) <= 1:
-				afc_mkdir(create_using_usbmux(usbmux_address=usbmux_address), result, '/')
+#			devices = select_devices_by_connection_type(connection_type='USB', usbmux_address=usbmux_address)
+#			if len(devices) <= 1:
+			result, lockdown = lockdownForFirstDevice()
+			if result:
+				afc_mkdir(lockdown, result, '/')
 			
 		
 class TabAFC(QWidget):
