@@ -5,6 +5,17 @@ import logging
 import xml.etree.ElementTree as ET
 import re
 
+
+def logData(data, request = True):
+    try:
+        if data != b'':
+            log.info(f"Data received (Request: {request}): {data}")
+            extractXML(f'{data}', request)
+            
+    except Exception as e:
+        log.error("Failed to log data!", e)
+        pass
+    
 def extractXML(text, request = True):
     
 #   text = b'\x04\x02\x00\x00\x01\x00\x00\x00\x08\x00\x00\x00\x01\x00\x00\x00<?xml version="1.0" encoding="UTF-8"?>\n<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">\n<plist version="1.0">\n<dict>\n\t<key>ClientVersionString</key>\n\t<string>qt4i-usbmuxd</string>\n\t<key>DeviceID</key>\n\t<integer>3</integer>\n\t<key>MessageType</key>\n\t<string>Connect</string>\n\t<key>PortNumber</key>\n\t<integer>32498</integer>\n\t<key>ProgName</key>\n\t<string>pymobiledevice3</string>\n\t<key>kLibUSBMuxVersion</key>\n\t<integer>3</integer>\n</dict>\n</plist>\n'
@@ -16,10 +27,7 @@ def extractXML(text, request = True):
         plist_data = match.group(1)
         new_text = str(plist_data).replace("\\n", "\n")
         new_text = str(new_text).replace("\\t", "    ")
-        
-#       print("\n\n\nNew line:")
-#       print(f"{new_text}")
-#       print("\n\n\nNew line (prettified):")
+
         if request:
             print("\nREQUEST:")
         else:
@@ -63,39 +71,44 @@ def prettify_xml(xml_string):
 
 class USBMuxdProxy:
     def __init__(self):
+        self.accepted = False
         self.server = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         self.server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.server.bind("/var/run/usbmuxd")
-        self.server.listen(1)
+        self.server.listen(10)
         
         self.client = None
         self.client_thread = None
         
         self.real_usbmuxd = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        self.real_usbmuxd.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.real_usbmuxd.connect("/var/run/usbmux_real")
         
         self.read_thread = threading.Thread(target=self.read_real_usbmuxd_data)
 #       self.read_thread.start()
         
     def accept(self):
+#       if self.client == None:  
         client, address = self.server.accept()
         self.client = client
         self.client_thread = threading.Thread(target=self.handle_client)
         self.client_thread.start()
         
     def handle_client(self):
+#       self.real_usbmuxd.accept()
         while True:
             try:
-                data = self.client.recv(1024)
+                data = self.client.recv(65536)
                 
                 if data != b'':
-                    log.info(f"Data (handle_client): {data}")
-    #               prettify_xml(f'{data}')
-                    extractXML(f'{data}')
-    #               extractXML(data)
+                    logData(data)
+#                   log.info(f"Data (handle_client): {data}")
+#   #               prettify_xml(f'{data}')
+#                   extractXML(f'{data}')
+#   #               extractXML(data)
                     
                 if not data:
-                    time.sleep(0.01)
+                    time.sleep(0.1)
                     continue
                 
                 self.real_usbmuxd.sendall(data)
@@ -103,24 +116,25 @@ class USBMuxdProxy:
                 log.error("Failed to read data from real USBMuxd daemon (handle_client):", e)
                 continue
             
-        log.info("Client disconnected")
-        self.client.close()
-        self.client = None
-        self.client_thread = None
+#       log.info("Client disconnected")
+#       self.client.close()
+#       self.client = None
+#       self.client_thread = None
         
     def read_real_usbmuxd_data(self):
         while True:
             try:
-                data = self.real_usbmuxd.recv(1024)
+                data = self.real_usbmuxd.recv(65536)
                 
                 if data != b'':
+                    logData(data, False)
 #                   log.info(f"Data (read_real_usbmuxd_data): {data}")
-#                   prettify_xml(f'{data}')
-                    extractXML(f'{data}', False)
-#                   extractXML(data)
+##                   prettify_xml(f'{data}')
+#                   extractXML(f'{data}', False)
+##                   extractXML(data)
                     
                 if not data:
-                    time.sleep(0.01)
+                    time.sleep(0.1)
                     continue
                 
                 self.client.sendall(data)
@@ -140,10 +154,11 @@ class USBMuxdProxy:
         self.read_thread.start()
         
         while True:
-            log.info("Waiting for client connection")
-            self.accept()
-            
-            time.sleep(0.01)
+            if not self.accepted:
+                log.info("Waiting for client connection")
+                self.accept()
+#               self.accepted = True
+#           time.sleep(0.01)
             
 if __name__ == "__main__":
     log = logging.getLogger(__name__)

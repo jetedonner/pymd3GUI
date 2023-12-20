@@ -156,7 +156,7 @@ class TabGeneral(QWidget):
 #		self.my_dict = {}
 				
 #		self.tblBasicInfos.loadBasicInfoFromLockdownClient(self.lockdownClient)
-		self.loadData()
+#		self.loadData()
 	
 	def loadData(self):
 		self.my_dict = {}

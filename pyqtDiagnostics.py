@@ -58,6 +58,7 @@ class TabDiagnostics(QWidget):
 		self.ModeGP.setLayout(QHBoxLayout())
 		
 		self.cmdRestartDevice = QPushButton("Restart Device")
+		self.cmdRestartDevice.setToolTip("Restart the current device in normal mode")
 		
 		def restartClickedHandler():
 			result, lockdown = lockdownForFirstDevice()
@@ -69,6 +70,7 @@ class TabDiagnostics(QWidget):
 		self.ModeGP.layout().addWidget(self.cmdRestartDevice)
 		
 		self.cmdShutdownDevice = QPushButton("Shutdown Device")
+		self.cmdShutdownDevice.setToolTip("Shutdown the current device (Power OFF)")
 		
 		def shutdownClickedHandler():
 			result, lockdown = lockdownForFirstDevice()
@@ -80,6 +82,7 @@ class TabDiagnostics(QWidget):
 		self.ModeGP.layout().addWidget(self.cmdShutdownDevice)
 		
 		self.cmdSleepDevice = QPushButton("Sleep Device")
+		self.cmdSleepDevice.setToolTip("Put the current device into sleep mode")
 		
 		def sleepClickedHandler():
 			result, lockdown = lockdownForFirstDevice()
@@ -91,6 +94,8 @@ class TabDiagnostics(QWidget):
 		self.ModeGP.layout().addWidget(self.cmdSleepDevice)
 		
 		self.cmdEnterRecovery = QPushButton("Enter Recovery")
+		
+		self.cmdEnterRecovery.setToolTip("Restart the current device into recovery mode (also DFU)")
 		
 		def enterRecoveryClickedHandler():
 			result, lockdown = lockdownForFirstDevice()

@@ -99,14 +99,15 @@ class Pymobiledevice3GUIWindow(QMainWindow):
         self.tabWidget = QTabWidget()
         # tabWidget
         self.cmbDevices = QComboBox()
-        mux = usbmux.MuxConnection.create()
-        mux.get_device_list(0.1)
-        devices = mux.devices
-        if len(devices) >= 1:
-            for device in devices:
-                self.cmbDevices.addItem(device.serial)
-        else:
-            self.cmbDevices.addItem("<No device connected>")
+#       self.loadDevices()
+#       mux = usbmux.MuxConnection.create()
+#       mux.get_device_list(0.1)
+#       devices = mux.devices
+#       if len(devices) >= 1:
+#           for device in devices:
+#               self.cmbDevices.addItem(device.serial)
+#       else:
+#           self.cmbDevices.addItem("<No device connected>")
 
         self.statusBar = QStatusBar()
         self.setStatusBar(self.statusBar)
@@ -120,10 +121,17 @@ class Pymobiledevice3GUIWindow(QMainWindow):
         self.txtAddress.setAttribute(Qt.WidgetAttribute.WA_MacShowFocusRect, 0)
         self.txtAddress.setToolTip("Specify a usbmuxd address")
         self.txtAddress.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Maximum)
+        self.cmdRefresh = QPushButton()
+        self.cmdRefresh.setIcon(IconHelper.getRefreshIcon())
+        self.cmdRefresh.setIconSize(QSize(16, 16))
+        self.cmdRefresh.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Maximum)
+        self.cmdRefresh.clicked.connect(self.refresh_clicked)
+        
         self.gbDevices = QGroupBox("Devices")
         self.gbDevices.setLayout(QHBoxLayout())
         self.gbDevices.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Maximum)
         self.gbDevices.layout().addWidget(self.cmbDevices)
+        self.gbDevices.layout().addWidget(self.cmdRefresh)
         self.gbDevices.layout().addWidget(self.lblAddress)
         self.gbDevices.layout().addWidget(self.txtAddress)
         
@@ -184,10 +192,33 @@ class Pymobiledevice3GUIWindow(QMainWindow):
         
         self.threadpool = QThreadPool()
         
-        self.start_workerAFC()
+        self.loadDevices()
+        
+#       self.start_workerAFC()
         
         self.updateStatusBar("Ready...")
     
+    def loadDevices(self):
+        self.cmbDevices.clear()
+        self.mux = usbmux.MuxConnection.create()
+        self.mux.get_device_list(0.1)
+        self.devices = self.mux.devices
+        if len(self.devices) >= 1:
+            for device in self.devices:
+                self.cmbDevices.addItem(device.serial)
+                
+            self.tabGeneral.loadData()
+#           self.tabAFC.tree_widget.setEnabled(False)
+            self.start_workerAFC()
+        else:
+            self.cmbDevices.addItem("<No device connected>")
+    
+    def refresh_clicked(self):
+        self.updateProgress(20)
+        self.updateStatusBar("Refreshing devices and infos ...")
+        self.loadDevices()
+        self.updateProgress(100, True)
+        
     # Snip...
     def _createMenuBar(self):
         menuBar = self.menuBar()
@@ -252,7 +283,8 @@ class Pymobiledevice3GUIWindow(QMainWindow):
         QCoreApplication.processEvents()
     
     def start_workerAFC(self):
-        workerAFC = AFCWorker(self.afc_receiver, self.tabAFC.root_item)
+        workerAFC = AFCWorker(self.afc_receiver, self.tabAFC.root_item, self.tabAFC.tree_widget)
+#       workerAFC.treeWidget = self.tree_widget
         workerAFC.signals.sendProgressUpdate.connect(self.handle_progressUpdate)
         workerAFC.signals.finished.connect(self.handle_progressFinished)
         self.threadpool.start(workerAFC)
@@ -274,9 +306,11 @@ class Pymobiledevice3GUIWindow(QMainWindow):
         t = Timer(1.0, self.resetProgress)
         t.start() # after 30 seconds, "hello, world" will be printed
     
-    def updateProgress(self, newValue):
+    def updateProgress(self, newValue, finished = False):
 #       print(f"newValue: {newValue}")
         self.progressbar.setValue(int(newValue))
+        if finished:
+            self.handle_progressFinished()
 #       self.progressbar.repaint()
         
     def resetProgress(self):

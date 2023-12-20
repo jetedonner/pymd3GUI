@@ -33,9 +33,13 @@ class AFCWorkerSignals(QObject):
 	sendProgressUpdate = pyqtSignal(int)
 	
 class AFCWorker(QRunnable):
-	def __init__(self, data_receiver, root_item):
+	
+	treeWidget = None
+	
+	def __init__(self, data_receiver, root_item, tree_widget):
 		super(AFCWorker, self).__init__()
 		self.isAFCActive = False
+		self.treeWidget = tree_widget
 		self.root_item = root_item
 		self.data_receiver = data_receiver
 		self.signals = AFCWorkerSignals()
@@ -45,6 +49,7 @@ class AFCWorker(QRunnable):
 		self.runAFCLs()
 		
 	def runAFCLs(self):
+		self.treeWidget.setEnabled(False)
 		QCoreApplication.processEvents()
 		if self.isAFCActive:
 			interruptFCActive = True
@@ -58,8 +63,10 @@ class AFCWorker(QRunnable):
 			afc_ls(lockdown, self.root_item, "/", False, self.signals.sendProgressUpdate)
 			
 		self.isAFCActive = False
+		self.treeWidget.setEnabled(True)
 		QCoreApplication.processEvents()
 		self.signals.finished.emit()
+		QCoreApplication.processEvents()
 		
 		
 	def handle_interruptAFC(self):
