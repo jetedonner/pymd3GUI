@@ -7,12 +7,13 @@ def handle_usbmuxd_client_connection(usbmuxd_client_socket):
 #	usbmuxd_real_socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
 #	usbmuxd_real_socket.connect("/var/run/usbmuxd_real")
 	while True:
-		data = usbmuxd_client_socket.recv(1024)
+		data = usbmuxd_client_socket.recv(4096)
 		
 		# Check if there's any more data to receive
 		if not data:
 			break
 		
+		print(f'Client: {data}')
 		# Forward the data to usbmuxd_real socket
 		usbmuxd_real_socket.sendall(data)
 		
@@ -20,12 +21,13 @@ def handle_usbmuxd_client_connection(usbmuxd_client_socket):
 	
 def handle_usbmuxd_real_connection(usbmuxd_real_socket):
 	while True:
-		data = usbmuxd_real_socket.recv(1024)
+		data = usbmuxd_real_socket.recv(4096)
 		
 		# Check if there's any more data to receive
 		if not data:
 			break
 		
+		print(f'Real: {data}')
 		# Forward the data to usbmuxd client socket
 		usbmuxd_client_socket.sendall(data)
 		
@@ -39,7 +41,7 @@ usbmuxd_socket.bind("/var/run/usbmuxd")
 usbmuxd_socket.listen(1)
 
 usbmuxd_real_socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-usbmuxd_real_socket.connect("/var/run/usbmuxd_real")
+usbmuxd_real_socket.connect("/var/run/usbmux_real")
 
 
 # Create threads for handling incoming connections

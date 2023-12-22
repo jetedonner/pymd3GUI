@@ -8,13 +8,15 @@ import re
 
 def logData(data, request = True):
     try:
+        last_character = data[-1]
+        print(f'last_character: {last_character}')
         if data != b'':
             log.info(f"Data received (Request: {request}): {data}")
             extractXML(f'{data}', request)
             
     except Exception as e:
         log.error("Failed to log data!", e)
-        pass
+#       pass
     
 def extractXML(text, request = True):
     
@@ -111,7 +113,7 @@ class USBMuxdProxy:
                     time.sleep(0.1)
                     continue
                 
-                self.real_usbmuxd.sendall(data)
+                self.real_usbmuxd.send(data)
             except Exception as e:
                 log.error("Failed to read data from real USBMuxd daemon (handle_client):", e)
                 continue
@@ -137,7 +139,7 @@ class USBMuxdProxy:
                     time.sleep(0.1)
                     continue
                 
-                self.client.sendall(data)
+                self.client.send(data)
             except Exception as e:
                 log.error("Failed to read data from real USBMuxd daemon (read_real_usbmuxd_data):", e)
                 continue

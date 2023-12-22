@@ -130,12 +130,28 @@ class TabGeneral(QWidget):
 		self.layMode.addWidget(self.optExt)
 		self.gbSelection.layout().addWidget(self.widMode)
 		
-		self.chkUSB = QCheckBox("USB Devices")
-		self.chkUSB.setChecked(True)
-		self.chkNetwork = QCheckBox("Network Devices")
-
-		self.layChannel.addWidget(self.chkUSB)
-		self.layChannel.addWidget(self.chkNetwork)
+		
+#		@property
+#		def enable_wifi_connections(self) -> bool:
+#			return self.get_value('com.apple.mobile.wireless_lockdown').get('EnableWifiConnections', False)
+#	
+#		@enable_wifi_connections.setter
+#		def enable_wifi_connections(self, value: bool) -> None:
+#			self.set_value(value, 'com.apple.mobile.wireless_lockdown', 'EnableWifiConnections')
+		
+		self.chkWireless = QCheckBox("Wireless On")
+		self.chkWireless.stateChanged.connect(self.wireless_changed)
+		
+#		self.chkUSB.setChecked(True)
+		self.layChannel.addWidget(self.chkWireless)
+#		self.chkNetwork = QCheckBox("Network Devices")
+		
+#		self.chkUSB = QCheckBox("USB Devices")
+#		self.chkUSB.setChecked(True)
+#		self.chkNetwork = QCheckBox("Network Devices")
+#
+#		self.layChannel.addWidget(self.chkUSB)
+#		self.layChannel.addWidget(self.chkNetwork)
 		self.gbSelection.layout().addWidget(self.widChannel)
 		
 		self.refreshButton = QPushButton("Reload Infos")
@@ -159,8 +175,16 @@ class TabGeneral(QWidget):
 #		self.tblBasicInfos.loadBasicInfoFromLockdownClient(self.lockdownClient)
 #		self.loadData()
 	
+	def wireless_changed(self, state):
+		wirelessOn = (state == 2)
+		self.lockdownClient.set_value(wirelessOn, 'com.apple.mobile.wireless_lockdown', 'EnableWifiConnections')
+		self.window().updateStatusBar(f"WirelessOn changed to {wirelessOn}")
+			
 	def loadData(self):
 		self.my_dict = {}
+		strWirelessOn = self.lockdownClient.get_value('com.apple.mobile.wireless_lockdown').get('EnableWifiConnections', False)
+		print(f'WirelessOn: {strWirelessOn}')
+		self.chkWireless.setChecked(strWirelessOn)
 		self.tblBasicInfos.loadBasicInfoFromLockdownClient(self.lockdownClient)
 		
 	def optBasicToggled(self, state):

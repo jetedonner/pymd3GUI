@@ -13,6 +13,7 @@ from PyQt6.QtWidgets import *
 from pyqtDeviceHelper import *
 from socatListener import *
 from helper import pyqtIconHelper
+from pyqt import *
 
 class CommReceiver(QObject):
 	#	data_received = pyqtSignal(str)
@@ -37,6 +38,18 @@ class CommWorker(QRunnable):
 	
 	def __init__(self, data_receiver):
 		super(CommWorker, self).__init__()
+		
+		if True:
+			mv_command = "sudo mv /var/run/usbmux_real /var/run/usbmux_real2"
+			mv_command_revert = "sudo mv /var/run/usbmux_real2 /var/run/usbmux_real"
+			
+			socat_command = [
+				"sudo", "socat",
+				"-t100", "-v", # "-x",
+				"UNIX-LISTEN:/var/run/usbmux_real,mode=777,reuseaddr,fork",
+				"UNIX-CONNECT:/var/run/usbmux_real2"
+			]
+			
 		self.isCommActive = False
 		self.data_receiver = data_receiver
 		self.data_receiver.interruptComm.connect(self.handle_interruptComm)
@@ -67,7 +80,7 @@ class CommWorker(QRunnable):
 					
 					#	input("Press Enter to exit...")
 					while self.isCommActive:
-						print("WAITING ....")
+#						print("WAITING ....")
 						time.sleep(0.1)
 						
 				except Exception as e:
@@ -116,6 +129,11 @@ class TabCommunication(QWidget):
 		super().__init__(parent)
 		
 		self.doAutoScroll = True
+		
+		if DEV_MODE:
+			print(f"Dev mode: {DEV_MODE} (TRUE)")
+		else:
+			print(f"Dev mode: {DEV_MODE} (FALSE)")
 		
 		self.setLayout(QVBoxLayout())
 		

@@ -38,6 +38,7 @@ from pyqtCommunication import *
 
 from helper import *
 
+DEV_MODE = True
 #ERROR_MSG = "ERROR"
 WINDOW_SIZE = 620
 #DISPLAY_HEIGHT = 35
@@ -208,12 +209,14 @@ class Pymobiledevice3GUIWindow(QMainWindow):
         self.tabSysLog.sysLogActive.setChecked(False)
         self.tabSysLog.interruptSysLogThread()
         
-        self.mux = usbmux.MuxConnection.create()
-        self.mux.get_device_list(0.1)
-        self.devices = self.mux.devices
+#       self.mux = usbmux.MuxConnection.create()
+#       self.mux.get_device_list(0.1)
+#       self.devices = self.mux.devices
+        self.devices = list_devices()
         if len(self.devices) >= 1:
             for device in self.devices:
-                self.cmbDevices.addItem(device.serial)
+#               print(f'{device}')
+                self.cmbDevices.addItem(f'{device.serial} ({device.connection_type})')
                 
             self.tabGeneral.loadData()
 #           self.tabAFC.tree_widget.setEnabled(False)
