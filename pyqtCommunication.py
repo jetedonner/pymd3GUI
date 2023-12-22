@@ -5,8 +5,6 @@ import time
 
 from pymobiledevice3.usbmux import select_devices_by_connection_type
 from pymobiledevice3.lockdown import LockdownClient, create_using_usbmux
-#from pymobiledevice3.services.syslog import SyslogService
-#from pymobiledevice3.services.os_trace import OsTraceService, SyslogLogLevel
 
 from PyQt6.QtCore import *
 from PyQt6.QtGui import QIntValidator, QColor
@@ -15,7 +13,6 @@ from PyQt6.QtWidgets import *
 from pyqtDeviceHelper import *
 from socatListener import *
 from helper import pyqtIconHelper
-#import pyqtIconHelper
 
 class CommReceiver(QObject):
 	#	data_received = pyqtSignal(str)
@@ -28,50 +25,38 @@ class CommWorkerSignals(QObject):
 	
 class CommWorker(QRunnable):
 	
+	mv_command = "sudo mv /var/run/usbmux_real /var/run/usbmux_real2"
+	mv_command_revert = "sudo mv /var/run/usbmux_real2 /var/run/usbmux_real"
+	
 	socat_command = [
 		"sudo", "socat",
 		"-t100", "-v", # "-x",
-		"UNIX-LISTEN:/var/run/usbmux_real2,mode=777,reuseaddr,fork",
-		"UNIX-CONNECT:/var/run/usbmux_real3"
+		"UNIX-LISTEN:/var/run/usbmux_real,mode=777,reuseaddr,fork",
+		"UNIX-CONNECT:/var/run/usbmux_real2"
 	]
 	
 	def __init__(self, data_receiver):
 		super(CommWorker, self).__init__()
 		self.isCommActive = False
 		self.data_receiver = data_receiver
+		self.data_receiver.interruptComm.connect(self.handle_interruptComm)
+		print(f'self.data_receiver: {self.data_receiver}')
 		self.signals = CommWorkerSignals()
 		self.proc = None
 		
 	def run(self):
-		self.data_receiver.interruptComm.connect(self.handle_interruptComm)
+		self.isCommActive = True
+#		self.data_receiver.interruptComm.connect(self.handle_interruptComm)
+#		print(f'self.data_receiver: {self.data_receiver}')
 		QCoreApplication.processEvents()
 		self.runComm()
 		
 	def runComm(self):
-		self.isCommActive = True
-		
 		try:
-#			mv_command = [
-#				"sudo", "mv",
-#				"/var/run/usbmux_real2", "/var/run/usbmux_real3"
-#			]
-			
-			mv_command = [
-				"sudo", "mv",
-				"/var/run/usbmux_real2", "/var/run/usbmux_real3"
-			]
-			
-#			mv_command_revert = [
-#				"sudo", "mv",
-#				"/var/run/usbmux_real3", "/var/run/usbmux_real2"
-#			]
-			process = subprocess.run("sudo mv /var/run/usbmux_real2 /var/run/usbmux_real3", shell=True, check=True, text=True, universal_newlines=True, stdout=subprocess.PIPE)
-			stdout = process.stdout
-			
-			if process.returncode == 0:
-				print(f"Command mv executed successfully: {mv_command}")
+			result, msg, stdout = self.runCommand(self.mv_command)
+			if result:
+				print(msg)
 				print(stdout)
-				
 				try:
 					# Start socat as a subprocess with stdout and stderr as pipes
 					self.proc = subprocess.Popen(self.socat_command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
@@ -80,36 +65,50 @@ class CommWorker(QRunnable):
 					self.output_thread = threading.Thread(target=self.read_output, args=(self.proc,), daemon=True)
 					self.output_thread.start()
 					
-				#	input("Press Enter to exit...")
+					#	input("Press Enter to exit...")
 					while self.isCommActive:
+						print("WAITING ....")
 						time.sleep(0.1)
 						
 				except Exception as e:
 					print(f"Error: {e}")
-					
-				self.signals.finished.emit()
+				finally:
+					resultRevert, msgRevert, stdoutRevert = self.runCommand(self.mv_command_revert)
+					self.signals.finished.emit()
+					QCoreApplication.processEvents()
 			else:
-				print(f"Command mv execution failed: {mv_command}")
+				print(msg)
 				print(stdout)
 		except Exception as e:
-			print(f"Error moving usbmux: {e}")
+			print(f"Error starting communication listener. Exception: {e}")
 			
-		
-	
+	def runCommand(self, cmd):
+		try:
+			process = subprocess.run(cmd, shell=True, check=True, text=True, universal_newlines=True, stdout=subprocess.PIPE)
+			stdout = process.stdout
+			
+			if process.returncode == 0:
+				return True, f"Command executed successfully: {cmd}", stdout
+			else:
+				return False, f"Command execution failed: {cmd}", stdout
+		except Exception as e:
+			return False, f"Command execution failed: {cmd}, Error: {e}", None
+			
 	# Function to read and print subprocess output
 	def read_output(self, proc):
 		while self.isCommActive:
 			line = self.proc.stdout.readline()
 			if not line:
 				break
-			# print(line.decode('utf-8').strip())
 			print(f'{line}')
 			self.signals.sendComm.emit(str(f"{line}"))
 			QCoreApplication.processEvents()
 			
 	def handle_interruptComm(self):
+		QCoreApplication.processEvents()
 		print(f"Received interrupt in the communication worker thread")
 		self.isCommActive = False
+		QCoreApplication.processEvents()
 
 class TabCommunication(QWidget):
 		
@@ -204,21 +203,21 @@ class TabCommunication(QWidget):
 		
 		self.gbConsole.layout().addWidget(self.widCtrl)
 		
-		self.comm_receiver = CommReceiver()
-		self.commWorker = CommWorker(self.comm_receiver)
-		self.commWorker.signals.sendComm.connect(self.handle_sendComm)
-	
-	def handle_sendComm(self, text):
-		if text[0] == "<":
-			self.txtConsole.setTextColor(QColor("green"))
-		elif text[0] == ">":
-			self.txtConsole.setTextColor(QColor("red"))
-		else:
-			self.txtConsole.setTextColor(QColor("white"))
-		self.txtConsole.insertPlainText(text) #.append(text, color)
-		if self.doAutoScroll:
-			self.sb = self.txtConsole.verticalScrollBar()
-			self.sb.setValue(self.sb.maximum())
+#		self.comm_receiver = CommReceiver()
+#		self.commWorker = CommWorker(self.comm_receiver)
+#		self.commWorker.signals.sendComm.connect(self.handle_sendComm)
+#	
+#	def handle_sendComm(self, text):
+#		if text[0] == "<":
+#			self.txtConsole.setTextColor(QColor("green"))
+#		elif text[0] == ">":
+#			self.txtConsole.setTextColor(QColor("red"))
+#		else:
+#			self.txtConsole.setTextColor(QColor("white"))
+#		self.txtConsole.insertPlainText(text) #.append(text, color)
+#		if self.doAutoScroll:
+#			self.sb = self.txtConsole.verticalScrollBar()
+#			self.sb.setValue(self.sb.maximum())
 	
 	def commAutoScroll_changed(self, state):
 		autoScrollComm = (state == 2)
@@ -233,13 +232,18 @@ class TabCommunication(QWidget):
 		
 	def cmdStartListening_clicked(self):
 		if self.cmdStartListening.text() == "Stop listening":
-			self.comm_receiver.interruptComm.emit()
+			QCoreApplication.processEvents()
+			print(f'self.window().comm_receiver: {self.window().comm_receiver}')
+			self.window().comm_receiver.interruptComm.emit()
+#			print("Before deactivating communication listener!")
+#			self.comm_receiver.interruptComm.emit()
 			self.addConsoleTxt("Communication listener stopped ...")
 			self.cmdStartListening.setText("Start listening")
+#			print("End deactivating communication listener!")
 			QCoreApplication.processEvents()
 			pass
 		else:
-			self.window().threadpool.start(self.commWorker)
+			self.window().start_workerComm() #.threadpool.start(self.commWorker)
 			self.addConsoleTxt("Communication listener started ...")
 			self.cmdStartListening.setText("Stop listening")
 			QCoreApplication.processEvents()

@@ -191,6 +191,7 @@ class Pymobiledevice3GUIWindow(QMainWindow):
         self.sysLog_receiver = SysLogReceiver()
         self.afc_receiver = AFCReceiver()
         self.general_receiver = GeneralReceiver()
+        self.comm_receiver = CommReceiver()
         
         self.threadpool = QThreadPool()
         
@@ -277,6 +278,27 @@ class Pymobiledevice3GUIWindow(QMainWindow):
         self.threadpool.start(workerGeneral)
         
         QCoreApplication.processEvents()
+        
+    def start_workerComm(self):
+        self.updateStatusBar("Starting communication listener ...")
+        commWorker = CommWorker(self.comm_receiver)
+        commWorker.signals.sendComm.connect(self.handle_sendComm)
+        self.threadpool.start(commWorker)
+        
+        QCoreApplication.processEvents()
+        
+    def handle_sendComm(self, text):
+        if text[0] == "<":
+            self.tabCommunication.txtConsole.setTextColor(QColor("green"))
+        elif text[0] == ">":
+            self.tabCommunication.txtConsole.setTextColor(QColor("red"))
+        else:
+            self.tabCommunication.txtConsole.setTextColor(QColor("white"))
+        self.tabCommunication.txtConsole.insertPlainText(text) #.append(text, color)
+        if self.tabCommunication.doAutoScroll:
+            self.tabCommunication.sb = self.tabCommunication.txtConsole.verticalScrollBar()
+            self.tabCommunication.sb.setValue(self.tabCommunication.sb.maximum())
+            
 
     def handle_result(self, result):
         print(f"Received result in the main thread: {result}")
