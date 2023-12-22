@@ -14,6 +14,7 @@ class IconHelper():
 	iconFolder = None
 	iconFile = None
 	iconRefresh = None
+	iconBin = None
 	
 	@staticmethod
 	def initIcons():
@@ -24,6 +25,9 @@ class IconHelper():
 		IconHelper.iconFolder = QIcon(os.path.join(resources_root, 'folder.png'))
 		IconHelper.iconFile = QIcon(os.path.join(resources_root, 'file.png'))
 		IconHelper.iconRefresh = QIcon(os.path.join(resources_root, 'refresh.png'))
+		IconHelper.iconBin = QIcon(os.path.join(resources_root, 'recyclebin.png'))
+		
+		
 	
 	@staticmethod
 	def getAppIcon():
@@ -40,3 +44,7 @@ class IconHelper():
 	@staticmethod
 	def getRefreshIcon():
 		return IconHelper.iconRefresh
+	
+	@staticmethod
+	def getBinIcon():
+		return IconHelper.iconBin

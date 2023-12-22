@@ -134,13 +134,31 @@ def afc_ls_proccess_dir(sp: AfcService, root_item: QTreeWidgetItem, remote_file 
 #			print(path)
 #			print(sp.stat(path))
 			sp_stat = sp.stat(path)
-			child1_item = QTreeWidgetItem(root_item, [path[len(remote_file) + (1 if subDir else 0):], str(human_readable_size(sp_stat["st_size"])), formateDateTime(sp_stat["st_birthtime"]), formateDateTime(sp_stat["st_mtime"]), str(sp_stat["st_ifmt"]), str(sp_stat["st_nlink"]), str(sp_stat["st_blocks"])])
+			child1_item = QTreeWidgetItem(root_item, [path[len(remote_file) + (1 if subDir else 0):], str(human_readable_size(sp_stat["st_size"])), formateDateTime(sp_stat["st_birthtime"]), formateDateTime(sp_stat["st_mtime"]), f'{str(sp_stat["st_ifmt"])} ({formateIFMTString(str(sp_stat["st_ifmt"]))})', str(sp_stat["st_nlink"]), str(sp_stat["st_blocks"])])
 			if sp.isdir(path):
 				child1_item.setIcon(0, IconHelper.getFolderIcon())
 				afc_ls_proccess_dir(sp, child1_item, path, recursive, True, sendProgressUpdate)
 			else:
 				child1_item.setIcon(0, IconHelper.getFileIcon())
 			idx += 1
+
+def formateIFMTString(stIfmt):
+	if stIfmt == 'S_IFREG':
+		return 'File'
+	elif stIfmt == 'S_IFDIR':
+		return 'Directory'
+	elif stIfmt == 'S_IFCHR':
+		return 'Character device'
+	elif stIfmt == 'S_IFBLK':
+		return 'Block device'
+	elif stIfmt == 'S_IFFIFO':
+		return 'Named pipe'
+	elif stIfmt == 'S_IFLNK':
+		return 'Symbolic link'
+	elif stIfmt == 'S_IFSOCK':
+		return 'Socket'
+	else:
+		return '<Unknown>'
 
 def formateDateTimeString(dateTimeString):
 	formatted_string = dateTimeString
@@ -183,6 +201,7 @@ class AFCTreeWidget(QTreeWidget):
 	def __init__(self):
 		super().__init__()
 		
+		self.doubleClicked.connect(self.actionDoubleClicked_triggered)
 		# Create the context menu and add some actions
 		self.context_menu = QMenu(self)
 		actionShowInfos = self.context_menu.addAction("Show infos")
@@ -217,6 +236,10 @@ class AFCTreeWidget(QTreeWidget):
 	def contextMenuEvent(self, event):
 		# Show the context menu
 		self.context_menu.exec(event.globalPos())
+	
+	def actionDoubleClicked_triggered(self):
+		self.actionOpenFile_triggered()
+#		selected_items = self.selectedItems()
 		
 	def actionOpenFile_triggered(self):
 		selected_items = self.selectedItems()
@@ -224,27 +247,34 @@ class AFCTreeWidget(QTreeWidget):
 			first_selected_item = selected_items[0]
 			print(first_selected_item.text(0))
 			
-			path_to_open = self.getPathForItem(first_selected_item)
-			if path_to_open != '':
-#				devices = select_devices_by_connection_type(connection_type='USB', usbmux_address=usbmux_address)
-#				if len(devices) <= 1:
-				result, lockdown = lockdownForFirstDevice()
-				if result:
-					fileBytes = afc_openFile(lockdown, path_to_open)
-					file_content = fileBytes.decode('utf-8')
-					print(file_content)
-					hexData = [format(byte, '02x') for byte in fileBytes]
-					# Format the hexadecimal data for display
-					formattedHexData = ' '.join(hexData)
-					print(formattedHexData)
-					
-					self.window().updateStatusBar(f"Opening file '{first_selected_item.text(0)}' ...")
-#					self.window().mlDialog = MultilineTextDialog("File content", f"Content of file '{first_selected_item.text(0)}'", file_content, path_to_open, self.saveFileContentCallback)
-					self.window().fileContentDialog = FileContentDialog(first_selected_item.text(0), f"Content of file '{first_selected_item.text(0)}'", fileBytes, path_to_open, self.saveFileContentCallback)
-					
-					self.window().fileContentDialog.setModal(True)
-					self.window().fileContentDialog.show()
-#					self.window().mlDialog.raise_()
+			if first_selected_item.childCount() > 0:
+				first_selected_item.setExpanded(first_selected_item.isExpanded())
+				return
+			elif first_selected_item.text(4) == f"S_IFREG ({formateIFMTString(str('S_IFREG'))})":
+				path_to_open = self.getPathForItem(first_selected_item)
+				if path_to_open != '':
+	#				devices = select_devices_by_connection_type(connection_type='USB', usbmux_address=usbmux_address)
+	#				if len(devices) <= 1:
+					result, lockdown = lockdownForFirstDevice()
+					if result:
+						fileBytes = afc_openFile(lockdown, path_to_open)
+#						try:
+#							file_content = fileBytes.decode('utf-8')
+#						except Exception as e:
+#							file_content = f'{fileBytes}'
+#						print(file_content)
+#						hexData = [format(byte, '02x') for byte in fileBytes]
+#						# Format the hexadecimal data for display
+#						formattedHexData = ' '.join(hexData)
+#						print(formattedHexData)
+						
+						self.window().updateStatusBar(f"Opening file '{first_selected_item.text(0)}' ...")
+	#					self.window().mlDialog = MultilineTextDialog("File content", f"Content of file '{first_selected_item.text(0)}'", file_content, path_to_open, self.saveFileContentCallback)
+						self.window().fileContentDialog = FileContentDialog(first_selected_item.text(0), f"Content of file '{first_selected_item.text(0)}'", fileBytes, path_to_open, self.saveFileContentCallback)
+						
+						self.window().fileContentDialog.setModal(True)
+						self.window().fileContentDialog.show()
+	#					self.window().mlDialog.raise_()
 		
 	def actionRefresh_triggered(self):
 		self.window().start_workerAFC()
@@ -419,14 +449,14 @@ class AFCTreeWidget(QTreeWidget):
 							sp_stat = afc_mkdir(lockdown, text, path_to_create_folder)
 							child1_item = QTreeWidgetItem(selected_item, [text, str(human_readable_size(sp_stat["st_size"])), formateDateTime(sp_stat["st_birthtime"]), formateDateTime(sp_stat["st_mtime"]), str(sp_stat["st_ifmt"]), str(sp_stat["st_nlink"]), str(sp_stat["st_blocks"])])
 	
-	def saveFileContentCallback(self, success, filepath, result):
-		print(f'In saveFileContentCallback => success: {success} / result: {result}')
-		if(success and result != ''):
+	def saveFileContentCallback(self, success, filepath, txtToSave):
+		print(f'In saveFileContentCallback => success: {success} / result: {txtToSave}')
+		if(success and txtToSave != ''):
 #			devices = select_devices_by_connection_type(connection_type='USB', usbmux_address=usbmux_address)
 #			if len(devices) <= 1:
 			result, lockdown = lockdownForFirstDevice()
 			if result:
-				afc_updateFile(lockdown, filepath, str(result).encode("utf-8"))
+				afc_updateFile(lockdown, filepath, str(txtToSave).encode("utf-8"))
 				self.window().updateStatusBar(f"Saved file content to: '{filepath}' ...")
 				
 	def getNewFolderNameCallback(self, success, result):

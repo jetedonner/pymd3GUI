@@ -263,25 +263,25 @@ class TabTunnel(QWidget):
 		self.layout().addWidget(self.gbCtrl)
 		self.layout().addWidget(self.gbConsole)
 		
-		self.mutex = QMutex()
-		self.stopEvent = QWaitCondition()
-
-		self.thread = SubprocessThread(["find", "/", "python3"])
-		self.thread.start()
-
-#		self.textEdit.show()
-
-		# Start a loop to check if the user wants to abort the process
-		while True:
-			if self.thread.stopped:
-				print("Subprocess stopped")
-				break
-			else:
-				try:
-					self.exec()
-				except:
-					print("Subprocess exception catched")
-					break
+#		self.mutex = QMutex()
+#		self.stopEvent = QWaitCondition()
+#
+#		self.thread = SubprocessThread(["find", "/", "python3"])
+#		self.thread.start()
+#
+##		self.textEdit.show()
+#
+#		# Start a loop to check if the user wants to abort the process
+#		while True:
+#			if self.thread.stopped:
+#				print("Subprocess stopped")
+#				break
+#			else:
+#				try:
+#					self.exec()
+#				except:
+#					print("Subprocess exception catched")
+#					break
 		
 	def cmdStartTunnel_clicked(self):
 		if self.tunnelCreated:

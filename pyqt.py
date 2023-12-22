@@ -66,14 +66,15 @@ class Pymobiledevice3GUIWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("pymd3GUI - GUI for pymobiledevice3")
-        self.setFixedSize(WINDOW_SIZE * 2, WINDOW_SIZE)
+        self.setBaseSize(WINDOW_SIZE * 2, WINDOW_SIZE)
+#       self.setBaseSize(<#s#>)
         
         self._createMenuBar()
         self._createToolBars()
         
-        self.inputDialog = InputDialog("Enter folder name", "Please enter a name for the new folder", self.inputCallback)
-        self.mlDialog = MultilineTextDialog("File content", "", "", "", self.inputCallback)
-        self.fileContentDialog = FileContentDialog("File content", "", bytes(0), "", self.inputCallback)
+        self.inputDialog = None # InputDialog("Enter folder name", "Please enter a name for the new folder", self.inputCallback)
+        self.mlDialog = None # MultilineTextDialog("File content", "", "", "", self.inputCallback)
+        self.fileContentDialog = None # FileContentDialog("File content", "", bytes(0), "", self.inputCallback)
         
 #       self.showEvent(<#a0#>) .connect(self, Qt.SIGNAL('showEvent(QShowEvent*)'), self.onWindowShown)
 #       self.connect(self, Qt.SIGNAL('loadFinished(bool)'), self.onLoadFinished)
@@ -118,6 +119,7 @@ class Pymobiledevice3GUIWindow(QMainWindow):
         self.lblAddress = QLabel("Usbmuxd Address:")
         self.lblAddress.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Maximum)
         self.txtAddress = QLineEdit("/var/run/usbmuxd")
+        self.txtAddress.setReadOnly(True)
         self.txtAddress.setAttribute(Qt.WidgetAttribute.WA_MacShowFocusRect, 0)
         self.txtAddress.setToolTip("Specify a usbmuxd address")
         self.txtAddress.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Maximum)
@@ -196,10 +198,15 @@ class Pymobiledevice3GUIWindow(QMainWindow):
         
 #       self.start_workerAFC()
         
-        self.updateStatusBar("Ready...")
+        self.updateStatusBar("Ready ...")
     
     def loadDevices(self):
+        self.updateStatusBar("Reloading devices ...")
         self.cmbDevices.clear()
+        
+        self.tabSysLog.sysLogActive.setChecked(False)
+        self.tabSysLog.interruptSysLogThread()
+        
         self.mux = usbmux.MuxConnection.create()
         self.mux.get_device_list(0.1)
         self.devices = self.mux.devices
@@ -242,36 +249,6 @@ class Pymobiledevice3GUIWindow(QMainWindow):
     
     def inputCallback(self, success, result):
         print(f'In inputCallback => success: {success} / result: {result}')
-#   def showEvent(self, event):
-#       print('in showEvent')
-#       # Set image on QGraphicsView here, or something else that has to be done in showEvent
-#       
-#       # Which of these is correct ??
-##       super(MainForm, self).showEvent(event)
-#       super().showEvent(event)
-#       self.tabGeneral.refreshInfos()
-#       self.update()
-#       
-#   def loadFinished(self, successful):
-#       print('in loadFinished')
-#       # Set image on QGraphicsView here, or something else that has to be done in showEvent
-#       ,,, 
-#       # Which of these is correct ??
-##       super(MainForm, self).showEvent(event)
-#       super().loadFinished(successful)
-#   # Set the window title
-##   self.setWindowTitle("Window Loading Example")
-    
-#   def onWindowShown(self, event):
-#       # Perform some action when the window is shown
-#       print("Window has been shown")
-#       
-#   def onLoadFinished(self, successful):
-#       # Perform some action when the window has finished loading
-#       if successful:
-#           print("Window has finished loading")
-#       else:
-#           print("Window failed to load")
         
     def start_worker(self):
         worker = SysLogWorker(self.sysLog_receiver)
@@ -283,6 +260,7 @@ class Pymobiledevice3GUIWindow(QMainWindow):
         QCoreApplication.processEvents()
     
     def start_workerAFC(self):
+        self.updateStatusBar("Reloading filesystem ...")
         workerAFC = AFCWorker(self.afc_receiver, self.tabAFC.root_item, self.tabAFC.tree_widget)
 #       workerAFC.treeWidget = self.tree_widget
         workerAFC.signals.sendProgressUpdate.connect(self.handle_progressUpdate)
@@ -292,6 +270,7 @@ class Pymobiledevice3GUIWindow(QMainWindow):
         QCoreApplication.processEvents()
         
     def start_workerGeneral(self, lockdownClientExt):
+        self.updateStatusBar("Reloading device infos ...")
         workerGeneral = GeneralWorker(self.general_receiver, lockdownClientExt)
         workerGeneral.signals.sendProgressUpdate.connect(self.handle_progressUpdate)
         workerGeneral.signals.finished.connect(self.handle_finishedGeneral)
@@ -314,6 +293,7 @@ class Pymobiledevice3GUIWindow(QMainWindow):
 #       self.progressbar.repaint()
         
     def resetProgress(self):
+#       self.updateStatusBar("Ready ...")
         self.updateProgress(0)
         
     def handle_progressUpdate(self, newProgress:int):

@@ -41,6 +41,7 @@ class SysLogWorker(QRunnable):
 		self.data_receiver = data_receiver
 		self.signals = SysLogWorkerSignals()
 		
+		
 	def run(self):
 		self.data_receiver.interruptSysLog.connect(self.handle_interruptSysLog)
 		QCoreApplication.processEvents()
@@ -103,12 +104,15 @@ class LogginOutput(QTextEdit):
 			
 class TabSysLog(QWidget):
 	
+	def interruptSysLogThread(self):
+		QCoreApplication.processEvents()
+		self.window().sysLog_receiver.interruptSysLog.emit()
+		QCoreApplication.processEvents()
+		
 	def sysLogActive_changed(self, state):
 		interruptSysLogRunnable = (state == 2)
 		if not interruptSysLogRunnable:
-			QCoreApplication.processEvents()    
-			self.window().sysLog_receiver.interruptSysLog.emit()
-			QCoreApplication.processEvents()
+			self.interruptSysLogThread()
 		else:
 			self.changeLabel(self.textLog)
 			

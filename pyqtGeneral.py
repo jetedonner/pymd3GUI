@@ -151,6 +151,7 @@ class TabGeneral(QWidget):
 		self.tblBasicInfos = BasicInfoTableWidget(None)
 		self.gbBasic.layout().addWidget(self.tblBasicInfos)
 		
+		print(f'usbmux_address: {usbmux_address}')
 		self.lockdownClient = usbmux_list(usbmux_address, True, True, False)
 #		self.tblBasicInfos.loadBasicInfoFromLockdownClient(lockdownClient)
 #		self.my_dict = {}
