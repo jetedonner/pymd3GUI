@@ -12,6 +12,8 @@ from PyQt6.QtWidgets import *
 from BasicInfoTableWidget import *
 from pyqtDeviceHelper import *
 
+from pyqtTabBase import *
+
 usbmux_address = None
 
 class GeneralReceiver(QObject):
@@ -25,7 +27,6 @@ class GeneralWorkerSignals(QObject):
 class GeneralWorker(QRunnable):
 	def __init__(self, data_receiver, LockdownClientExt):
 		super(GeneralWorker, self).__init__()
-#		self.isAFCActive = False
 		self.my_dict = {}
 		self.lockdownClientExt = LockdownClientExt
 		self.data_receiver = data_receiver
@@ -39,35 +40,18 @@ class GeneralWorker(QRunnable):
 		allDom = self.lockdownClientExt.all_domains
 		itemsCount = len(allDom.keys())
 		idx = 0
-#		print(f'AllValues: {self.lockdownClientExt.all_domains}')
-		
 		for item in allDom.keys():
 			idx += 1
 			newPrgVal = int(idx/itemsCount*100)
 			self.signals.sendProgressUpdate.emit(int(newPrgVal))
 			QCoreApplication.processEvents()
 			daVal = allDom[item]
-#			print(f"item: {item}, key: {daVal}")
 			try:
 				valForKey = daVal
-				#				item.keys()
-#				valForKey = str(lockdown_get(self.lockdownClientExt, "", item, True))
 				self.my_dict.update({str(item): str(valForKey)})
 			except Exception as e:
 				self.my_dict.update({str(item): "<Error>"})
 				continue
-#		for item in self.lockdownClientExt.all_domains:
-#			idx += 1
-#			newPrgVal = int(idx/itemsCount*100)
-#			self.signals.sendProgressUpdate.emit(int(newPrgVal))
-#			QCoreApplication.processEvents()
-#			try:
-##				item.keys()
-#				valForKey = str(lockdown_get(self.lockdownClientExt, "", item, True))
-#				self.my_dict.update({str(item): valForKey})
-#			except Exception as e:
-#				self.my_dict.update({str(item): "<Error>"})
-#				continue
 				
 		self.signals.finished.emit(self.my_dict)
 		
@@ -101,7 +85,7 @@ def usbmux_list(usbmux_address: str, color: bool, usb: bool, network: bool) -> L
 		return lockdown
 	return None
 	
-class TabGeneral(QWidget):
+class TabGeneral(TabBase):
 	
 	def __init__(self, parent=None):
 		super().__init__(parent)
@@ -130,28 +114,10 @@ class TabGeneral(QWidget):
 		self.layMode.addWidget(self.optExt)
 		self.gbSelection.layout().addWidget(self.widMode)
 		
-		
-#		@property
-#		def enable_wifi_connections(self) -> bool:
-#			return self.get_value('com.apple.mobile.wireless_lockdown').get('EnableWifiConnections', False)
-#	
-#		@enable_wifi_connections.setter
-#		def enable_wifi_connections(self, value: bool) -> None:
-#			self.set_value(value, 'com.apple.mobile.wireless_lockdown', 'EnableWifiConnections')
-		
 		self.chkWireless = QCheckBox("Wireless On")
 		self.chkWireless.stateChanged.connect(self.wireless_changed)
-		
-#		self.chkUSB.setChecked(True)
 		self.layChannel.addWidget(self.chkWireless)
-#		self.chkNetwork = QCheckBox("Network Devices")
 		
-#		self.chkUSB = QCheckBox("USB Devices")
-#		self.chkUSB.setChecked(True)
-#		self.chkNetwork = QCheckBox("Network Devices")
-#
-#		self.layChannel.addWidget(self.chkUSB)
-#		self.layChannel.addWidget(self.chkNetwork)
 		self.gbSelection.layout().addWidget(self.widChannel)
 		
 		self.refreshButton = QPushButton("Reload Infos")
@@ -169,16 +135,11 @@ class TabGeneral(QWidget):
 		
 		print(f'usbmux_address: {usbmux_address}')
 		self.lockdownClient = usbmux_list(usbmux_address, True, True, False)
-#		self.tblBasicInfos.loadBasicInfoFromLockdownClient(lockdownClient)
-#		self.my_dict = {}
-				
-#		self.tblBasicInfos.loadBasicInfoFromLockdownClient(self.lockdownClient)
-#		self.loadData()
 	
 	def wireless_changed(self, state):
 		wirelessOn = (state == 2)
 		self.lockdownClient.set_value(wirelessOn, 'com.apple.mobile.wireless_lockdown', 'EnableWifiConnections')
-		self.window().updateStatusBar(f"WirelessOn changed to {wirelessOn}")
+		self.updateStatusBar(f"WirelessOn changed to {wirelessOn}")
 			
 	def loadData(self):
 		self.my_dict = {}
@@ -191,7 +152,7 @@ class TabGeneral(QWidget):
 		QCoreApplication.processEvents()
 		if(state):
 			self.gbBasic.setTitle("Basic infos")
-			self.window().updateStatusBar("Loading basic device infos ...")
+			self.updateStatusBar("Loading basic device infos ...")
 			self.lockdownClient = usbmux_list("/var/run/usbmuxd", True, True, False)
 			QCoreApplication.processEvents()
 			self.tblBasicInfos.loadBasicInfoFromLockdownClient(self.lockdownClient)
@@ -204,30 +165,14 @@ class TabGeneral(QWidget):
 			self.window().updateProgress(25)
 			QCoreApplication.processEvents()
 			self.my_dict = {}
-#			devices = select_devices_by_connection_type(connection_type='USB', usbmux_address=usbmux_address)
-#			if len(devices) <= 1:
 			result, lockdown = lockdownForFirstDevice()
 			if result:
-#				LockdownClientExt = lockdown
-				self.window().updateStatusBar("Loading extended device infos ...")
+				self.updateStatusBar("Loading extended device infos ...")
 				QCoreApplication.processEvents()
 				self.window().start_workerGeneral(lockdown)
 		pass
 
 
 	def refreshInfos(self):
-		
-#		oldHeight = self.gbSelection.height()
-#		print(oldHeight)
-#		self.gbSelection.setMinimumHeight(0)
-#		self.gbSelection.resize(self.gbSelection.width(), self.gbSelection.sizeHint().height())
-#		newHeight = self.gbSelection.sizeHint().height()
-#		print(newHeight)
-#		
-#		print(self.gbBasic.height())
-#		self.gbBasic.setMinimumHeight(0)
-#		self.gbBasic.resize(self.gbBasic.width(), self.gbBasic.sizeHint().height() + (oldHeight - newHeight))
-#		self.gbBasic.move(self.gbBasic.x(), self.gbBasic.y() - (oldHeight - newHeight))		
-#		print(self.gbBasic.sizeHint().height())
 		pass
 		

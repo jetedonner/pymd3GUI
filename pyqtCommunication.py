@@ -130,10 +130,10 @@ class TabCommunication(QWidget):
 		
 		self.doAutoScroll = True
 		
-		if DEV_MODE:
-			print(f"Dev mode: {DEV_MODE} (TRUE)")
-		else:
-			print(f"Dev mode: {DEV_MODE} (FALSE)")
+#		if DEV_MODE:
+#			print(f"Dev mode: {DEV_MODE} (TRUE)")
+#		else:
+#			print(f"Dev mode: {DEV_MODE} (FALSE)")
 		
 		self.setLayout(QVBoxLayout())
 		
@@ -147,10 +147,6 @@ class TabCommunication(QWidget):
 		self.layCtrlInnerSudo = QVBoxLayout()
 		self.widCtrlInnerSudo = QWidget()
 		self.widCtrlInnerSudo.setLayout(self.layCtrlInnerSudo)
-		
-#		self.layCtrlInnerHost = QVBoxLayout()
-#		self.widCtrlInnerHost = QWidget()
-#		self.widCtrlInnerHost.setLayout(self.layCtrlInnerHost)
 		
 		self.optSocat = QRadioButton("Socat")
 		self.optSocat.setToolTip("Use system 'socat' command for capturing communication")
@@ -201,15 +197,17 @@ class TabCommunication(QWidget):
 		self.widCtrl.setLayout(self.layCtrl)
 		
 		self.commActive = QCheckBox("Communication active")
+		self.commActive.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Maximum)
 		self.commActive.setToolTip("Is the communication log active?")
-#		self.commActive.stateChanged.connect(self.commActive_changed)
 		self.layCtrl.addWidget(self.commActive)
 		
 		self.autoScroll = QCheckBox("Autoscroll")
+		self.autoScroll.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Maximum)
 		self.autoScroll.setToolTip("Set autoscroll for the communication log")
 		self.autoScroll.setChecked(True)
 		self.autoScroll.stateChanged.connect(self.commAutoScroll_changed)
 		self.layCtrl.addWidget(self.autoScroll)
+		self.layCtrl.addStretch(0)
 		
 		self.cmdClear = QPushButton()
 		self.cmdClear.setIcon(pyqtIconHelper.IconHelper.getBinIcon())
@@ -220,30 +218,11 @@ class TabCommunication(QWidget):
 		self.layCtrl.addWidget(self.cmdClear)
 		
 		self.gbConsole.layout().addWidget(self.widCtrl)
-		
-#		self.comm_receiver = CommReceiver()
-#		self.commWorker = CommWorker(self.comm_receiver)
-#		self.commWorker.signals.sendComm.connect(self.handle_sendComm)
-#	
-#	def handle_sendComm(self, text):
-#		if text[0] == "<":
-#			self.txtConsole.setTextColor(QColor("green"))
-#		elif text[0] == ">":
-#			self.txtConsole.setTextColor(QColor("red"))
-#		else:
-#			self.txtConsole.setTextColor(QColor("white"))
-#		self.txtConsole.insertPlainText(text) #.append(text, color)
-#		if self.doAutoScroll:
-#			self.sb = self.txtConsole.verticalScrollBar()
-#			self.sb.setValue(self.sb.maximum())
 	
 	def commAutoScroll_changed(self, state):
 		autoScrollComm = (state == 2)
 		
 		self.doAutoScroll = autoScrollComm
-#		QMetaObject.invokeMethod(self.textLog,
-#				"updateAutoScroll", Qt.ConnectionType.QueuedConnection, 
-#				Q_ARG(bool, autoScrollSysLog))
 			
 	def clear_clicked(self):
 		self.txtConsole.clear()
@@ -253,15 +232,12 @@ class TabCommunication(QWidget):
 			QCoreApplication.processEvents()
 			print(f'self.window().comm_receiver: {self.window().comm_receiver}')
 			self.window().comm_receiver.interruptComm.emit()
-#			print("Before deactivating communication listener!")
-#			self.comm_receiver.interruptComm.emit()
 			self.addConsoleTxt("Communication listener stopped ...")
 			self.cmdStartListening.setText("Start listening")
-#			print("End deactivating communication listener!")
 			QCoreApplication.processEvents()
 			pass
 		else:
-			self.window().start_workerComm() #.threadpool.start(self.commWorker)
+			self.window().start_workerComm()
 			self.addConsoleTxt("Communication listener started ...")
 			self.cmdStartListening.setText("Stop listening")
 			QCoreApplication.processEvents()

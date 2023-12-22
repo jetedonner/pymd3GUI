@@ -35,6 +35,7 @@ from pyqtDiagnostics import *
 from pyqtSysLog import *
 from pyqtTunnel import *
 from pyqtCommunication import *
+from pyqtTabBase import *
 
 from helper import *
 
@@ -167,6 +168,9 @@ class Pymobiledevice3GUIWindow(QMainWindow):
         
         self.tabCommunication = TabCommunication()
         self.tabWidget.addTab(self.tabCommunication, "Communication")
+        
+        self.tabPcap = TabLogBase()
+        self.tabWidget.addTab(self.tabPcap, "PCap")
         
         self.topLayout.addWidget(self.gbDevices)
 

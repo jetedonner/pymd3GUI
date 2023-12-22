@@ -10,6 +10,7 @@ from PyQt6.QtGui import QIntValidator, QColor
 from PyQt6.QtWidgets import *
 
 from pyqtDeviceHelper import *
+from helper import pyqtIconHelper
 
 usbmux_address = None
 
@@ -181,6 +182,20 @@ class TabSysLog(QWidget):
 		self.autoScroll.setChecked(True)
 		self.autoScroll.stateChanged.connect(self.sysLogAutoScroll_changed)
 		self.layCtrl.addWidget(self.autoScroll)
+		
+		self.layCtrl.addStretch(0)
+		
+		self.cmdClear = QPushButton()
+		self.cmdClear.setIcon(pyqtIconHelper.IconHelper.getBinIcon())
+		self.cmdClear.setToolTip("Clear the sys log")
+		self.cmdClear.setIconSize(QSize(16, 16))
+		self.cmdClear.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Maximum)
+		self.cmdClear.clicked.connect(self.clear_clicked)
+		self.layCtrl.addWidget(self.cmdClear)
+		
 		self.gbLog.layout().addWidget(self.widCtrl)
 		self.layout().addWidget(self.gbLog)
 		self.widCtrl.adjustSize()
+		
+	def clear_clicked(self):
+		self.textLog.clear()

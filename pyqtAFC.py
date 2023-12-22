@@ -19,6 +19,7 @@ from helper.pyqtFileContentDialog import *
 from helper.pyqtIconHelper import *
 
 from pyqtDeviceHelper import *
+from pyqtTabBase import *
 
 usbmux_address = None
 
@@ -469,7 +470,7 @@ class AFCTreeWidget(QTreeWidget):
 				afc_mkdir(lockdown, result, '/')
 			
 		
-class TabAFC(QWidget):
+class TabAFC(QTabWidget):
 	
 	def __init__(self, parent=None):
 		super().__init__(parent)
