@@ -233,9 +233,9 @@ class FileContentDialog(QDialog):
 #				self.cmbEncoding.addItem(encodingToUse)
 			self.cmbEncoding.setCurrentText(str(encodingToUse))
 		
-		print("IN DIALOG ... ")
+#		print("IN DIALOG ... ")
 		try:
-			file_content = self.fileContent.decode('utf-8')
+			file_content = self.fileContent.decode(encodingToUse) #'utf-8')
 		except Exception as e:
 			file_content = f'{self.fileContent}'
 			

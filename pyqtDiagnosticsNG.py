@@ -12,6 +12,8 @@ from PyQt6.QtWidgets import *
 
 from pyqtDeviceHelper import *
 
+from pyqtTabBase import TabLogBase
+
 #usbmux_address = None
 
 def diagnostics_restart(service_provider: LockdownClient):
@@ -48,14 +50,19 @@ def diagnostics_ioregistry(service_provider: LockdownClient, plane = "", name = 
 				colored=color)
 	return DiagnosticsService(lockdown=service_provider).ioregistry(plane=plane, name=name, ioclass=ioclass)
 
-class TabDiagnostics(QWidget):
+class TabDiagnosticsNG(TabLogBase):
 	def __init__(self, parent=None):
-		super().__init__(parent)
+		super().__init__(False, False, False, parent)
 		
-		self.setLayout(QVBoxLayout())
+#		self.setLayout(QVBoxLayout())
 		
-		self.ModeGP = QGroupBox("Device Mode Control")
-		self.ModeGP.setLayout(QHBoxLayout())
+		self.gbConsole.setTitle("Output")
+		
+		
+		self.gbCtrl.setTitle("Device Mode Control")
+#		self.ModeGP = QGroupBox("Device Mode Control")
+#		self.ModeGP.setLayout(QHBoxLayout())
+		
 		
 		self.cmdRestartDevice = QPushButton("Restart Device")
 		self.cmdRestartDevice.setToolTip("Restart the current device in normal mode")
@@ -67,7 +74,7 @@ class TabDiagnostics(QWidget):
 				self.window().updateStatusBar("Device is restarting ...")
 				
 		self.cmdRestartDevice.clicked.connect(restartClickedHandler)
-		self.ModeGP.layout().addWidget(self.cmdRestartDevice)
+		self.gbCtrl.layout().addWidget(self.cmdRestartDevice)
 		
 		self.cmdShutdownDevice = QPushButton("Shutdown Device")
 		self.cmdShutdownDevice.setToolTip("Shutdown the current device (Power OFF)")
@@ -79,7 +86,7 @@ class TabDiagnostics(QWidget):
 				self.window().updateStatusBar("Device is shutting down ...")
 				
 		self.cmdShutdownDevice.clicked.connect(shutdownClickedHandler)
-		self.ModeGP.layout().addWidget(self.cmdShutdownDevice)
+		self.gbCtrl.layout().addWidget(self.cmdShutdownDevice)
 		
 		self.cmdSleepDevice = QPushButton("Sleep Device")
 		self.cmdSleepDevice.setToolTip("Put the current device into sleep mode")
@@ -91,7 +98,7 @@ class TabDiagnostics(QWidget):
 				self.window().updateStatusBar("Device is going to sleep ...")
 				
 		self.cmdSleepDevice.clicked.connect(sleepClickedHandler)
-		self.ModeGP.layout().addWidget(self.cmdSleepDevice)
+		self.gbCtrl.layout().addWidget(self.cmdSleepDevice)
 		
 		self.cmdEnterRecovery = QPushButton("Enter Recovery")
 		
@@ -104,20 +111,21 @@ class TabDiagnostics(QWidget):
 				self.window().updateStatusBar("Device is going to enter recovery ...")
 				
 		self.cmdEnterRecovery.clicked.connect(enterRecoveryClickedHandler)
-		self.ModeGP.layout().addWidget(self.cmdEnterRecovery)
+		self.gbCtrl.layout().addWidget(self.cmdEnterRecovery)
 		
-		self.layout().addWidget(self.ModeGP)
-		
-		self.InfoGP = QGroupBox("Infos")
-		self.InfoGP.setLayout(QVBoxLayout())
+	def addWidgetAfterCtrl(self):
+#		print("IN addWidgetAfterCtrl SubClass")
+		super().addWidgetAfterCtrl()
+		self.gpInfo = QGroupBox("Infos")
+		self.gpInfo.setLayout(QVBoxLayout())
 		
 		
 		def getInfosClickedHandler():
 			result, lockdown = lockdownForFirstDevice()
 			if result:
 				my_dict = diagnostics_info(lockdown, True)
-				self.textInfos.setPlainText(json.dumps(my_dict, indent=2))
-		
+				self.txtConsole.setPlainText(json.dumps(my_dict, indent=2))
+				
 		self.hInfoButtonsLayout = QHBoxLayout()
 		self.hInfoButtonsLayout.addStretch()
 		
@@ -136,7 +144,7 @@ class TabDiagnostics(QWidget):
 			result, lockdown = lockdownForFirstDevice()
 			if result:
 				my_dict = diagnostics_battery_single(lockdown, True)
-				self.textInfos.setPlainText(json.dumps(my_dict, indent=2, default=default_json_encoder))
+				self.txtConsole.setPlainText(json.dumps(my_dict, indent=2, default=default_json_encoder))
 				
 		self.cmdGetBaterry.clicked.connect(getBatteryClickedHandler)
 		self.cmdGetBaterry.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Maximum)
@@ -149,7 +157,7 @@ class TabDiagnostics(QWidget):
 			if result:
 				my_dict = diagnostics_mg(lockdown, None)
 				# decoded_dict = {(key.decode() if isinstance(key, bytes) else key): ((value.decode() if isinstance(value, bytes) else value) if value != None else "") for key, value in my_dict.items()}
-				self.textInfos.setPlainText(json.dumps(my_dict, skipkeys=True, indent=2, default=default_json_encoder))
+				self.txtConsole.setPlainText(json.dumps(my_dict, skipkeys=True, indent=2, default=default_json_encoder))
 				
 		self.cmdGetMG.clicked.connect(getMGClickedHandler)
 		self.cmdGetMG.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Maximum)
@@ -161,7 +169,7 @@ class TabDiagnostics(QWidget):
 			result, lockdown = lockdownForFirstDevice()
 			if result:
 				my_dict = diagnostics_ioregistry(lockdown)
-				self.textInfos.setPlainText(json.dumps(my_dict, skipkeys=True, indent=2, default=default_json_encoder))
+				self.txtConsole.setPlainText(json.dumps(my_dict, skipkeys=True, indent=2, default=default_json_encoder))
 				
 		self.cmdGetIO.clicked.connect(getIOClickedHandler)
 		self.cmdGetIO.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Maximum)
@@ -169,10 +177,6 @@ class TabDiagnostics(QWidget):
 		
 		self.hInfoButtonsWidget = QWidget()
 		self.hInfoButtonsWidget.setLayout(self.hInfoButtonsLayout)
-		self.InfoGP.layout().addWidget(self.hInfoButtonsWidget)
-		
-		self.textInfos = QTextEdit()
-		self.textInfos.setReadOnly(True)
-		self.InfoGP.layout().addWidget(self.textInfos)
-		
-		self.layout().addWidget(self.InfoGP)
+		self.gpInfo.layout().addWidget(self.hInfoButtonsWidget)
+		self.layout().addWidget(self.gpInfo)
+		pass

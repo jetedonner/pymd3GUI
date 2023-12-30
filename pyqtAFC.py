@@ -201,7 +201,7 @@ def afc_push(service_provider: LockdownClient, local_file, remote_path):
 class AFCTreeWidget(QTreeWidget):
 	def __init__(self):
 		super().__init__()
-		
+		self.setSelectionMode(QAbstractItemView.SelectionMode.MultiSelection)
 		self.doubleClicked.connect(self.actionDoubleClicked_triggered)
 		# Create the context menu and add some actions
 		self.context_menu = QMenu(self)
@@ -210,10 +210,10 @@ class AFCTreeWidget(QTreeWidget):
 #		actionOpenFile.setEnabled(False)
 		actionCopyPath = self.context_menu.addAction("Copy Path to File/Folder")
 		self.context_menu.addSeparator()
-		actionPullFile = self.context_menu.addAction("Pull file")
-		actionPushFile = self.context_menu.addAction("Push file")
+		actionPullFile = self.context_menu.addAction("Pull file(s)")
+		actionPushFile = self.context_menu.addAction("Push file(s)")
 		self.context_menu.addSeparator()
-		actionDeleteFile = self.context_menu.addAction("Delete file")
+		actionDeleteFile = self.context_menu.addAction("Delete file(s)")
 		actionCreateDir = self.context_menu.addAction("Create directory")
 		self.context_menu.addSeparator()
 		actionRefresh = self.context_menu.addAction("Refresh")
@@ -298,7 +298,9 @@ class AFCTreeWidget(QTreeWidget):
 	def actionPushFile_triggered(self):
 		selected_item = self.getFirstSelectedItem()
 		if selected_item:
-			pathToLocalFiles = QFileDialog.getOpenFileNames(None, "Select file(s) to push", "~/", "", "")
+			pathToLocalFiles = QFileDialog.getExistingDirectory(None, "Open Directory", "~/") # QFileDialog.Option.ShowDirsOnly
+								
+#			pathToLocalFiles = QFileDialog.getOpenFileNames(None, "Select file(s) to push", "~/", "", "")
 #			print(pathToLocalFiles)
 			if len(pathToLocalFiles[0]) > 0:
 #				lockdown = create_using_usbmux(usbmux_address=usbmux_address)
@@ -317,6 +319,10 @@ class AFCTreeWidget(QTreeWidget):
 					skipFilesAll = False
 					overwriteFilesAll = False
 					for pathToLocalFile in pathToLocalFiles[0]:
+						if pathToLocalFile.endswith("/"):
+							print(f"pathToLocalFile: {pathToLocalFiles} is a dir!!!")
+							continue
+						
 						idx += 1
 #						print(pathToLocalFile)
 #						print(remotePath)
@@ -368,10 +374,16 @@ class AFCTreeWidget(QTreeWidget):
 		
 		if selected_items:
 			first_selected_item = selected_items[0]
+			fileList = ""
+			for selected_item in selected_items:
+				if fileList != "":
+					fileList += ", "
+				fileList += selected_item.text(0)
+				
 			if first_selected_item.text(0) != '/':
 				dlg = QMessageBox(self)
-				dlg.setWindowTitle(f"Delete '{first_selected_item.text(0)}'?")
-				dlg.setText(f"Do you really want to delete '{first_selected_item.text(0)}'?")
+				dlg.setWindowTitle(f"Delete file(s)?")
+				dlg.setText(f"Do you really want to delete '{fileList}'?")
 				dlg.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
 				dlg.setIcon(QMessageBox.Icon.Question)
 				button = dlg.exec()
@@ -379,23 +391,26 @@ class AFCTreeWidget(QTreeWidget):
 				if button == QMessageBox.StandardButton.Yes:
 					print("Yes!")
 					
-					current_item = first_selected_item
-					path_to_copy = ("/" if current_item.text(0) != "/" else "") + current_item.text(0)
-					while current_item.parent() != None:
-						current_item = current_item.parent()
-						if current_item.text(0) != "/":
-							path_to_copy = "/" + current_item.text(0) + path_to_copy
-					
-					if path_to_copy != '/':
-#						devices = select_devices_by_connection_type(connection_type='USB', usbmux_address=usbmux_address)
-#						if len(devices) <= 1:
-						result, lockdown = lockdownForFirstDevice()
-						if result:
-							afc_rm(lockdown, path_to_copy)
-							if first_selected_item.parent() != None:
-								first_selected_item.parent().removeChild(first_selected_item)
-			#				wind:Pymobiledevice3GUIWindow = self.window()
-			#				self.window().start_workerAFC()	
+#					current_item = first_selected_item
+					for selected_item in selected_items:
+						current_item = selected_item
+						path_to_copy = ("/" if selected_item.text(0) != "/" else "") + selected_item.text(0)
+						while current_item.parent() != None:
+							current_item = current_item.parent()
+							if current_item.text(0) != "/":
+								path_to_copy = "/" + current_item.text(0) + path_to_copy
+						
+						if path_to_copy != '/':
+	#						devices = select_devices_by_connection_type(connection_type='USB', usbmux_address=usbmux_address)
+	#						if len(devices) <= 1:
+							result, lockdown = lockdownForFirstDevice()
+							if result:
+								afc_rm(lockdown, path_to_copy)
+#								print(f"selected_item.parent(): {selected_item.parent()} / selected_item: {selected_item.text(0)}")
+								if selected_item.parent() != None:
+									selected_item.parent().removeChild(selected_item)
+				#				wind:Pymobiledevice3GUIWindow = self.window()
+				#				self.window().start_workerAFC()	
 				else:
 					print("No!")
 					

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-
+#import sys
 from pymobiledevice3.usbmux import select_devices_by_connection_type
 from pymobiledevice3.lockdown import LockdownClient, create_using_usbmux
 from pymobiledevice3 import usbmux
@@ -13,6 +13,8 @@ from BasicInfoTableWidget import *
 from pyqtDeviceHelper import *
 
 from pyqtTabBase import *
+
+from QSwitch import *
 
 usbmux_address = None
 
@@ -69,21 +71,26 @@ def lockdown_get(service_provider: LockdownClient, domain, key, color):
 	
 def usbmux_list(usbmux_address: str, color: bool, usb: bool, network: bool) -> LockdownClient:
 	""" list connected devices """
-	connected_devices = []
-	for device in usbmux.list_devices(usbmux_address=usbmux_address):
-		udid = device.serial
-		
-		if usb and not device.is_usb:
-			continue
-		
-		if network and not device.is_network:
-			continue
-		
-		lockdown = create_using_usbmux(udid, autopair=False, connection_type=device.connection_type,
-										usbmux_address=usbmux_address)
-		connected_devices.append(lockdown.short_info)
-		return lockdown
-	return None
+#	connected_devices = []
+#	try:
+#		for device in usbmux.list_devices(usbmux_address=usbmux_address):
+#			udid = device.serial
+#			
+#			if usb and not device.is_usb:
+#				continue
+#			
+#			if network and not device.is_network:
+#				continue
+#			
+#			lockdown = create_using_usbmux(udid, autopair=False, connection_type=device.connection_type,
+#											usbmux_address=usbmux_address)
+#			connected_devices.append(lockdown.short_info)
+#			return lockdown
+#	except Exception as e:
+#		print(f'Error: {e}')
+##		pass
+#	return None
+	pass
 	
 class TabGeneral(TabBase):
 	
@@ -114,9 +121,13 @@ class TabGeneral(TabBase):
 		self.layMode.addWidget(self.optExt)
 		self.gbSelection.layout().addWidget(self.widMode)
 		
-		self.chkWireless = QCheckBox("Wireless On")
-		self.chkWireless.stateChanged.connect(self.wireless_changed)
-		self.layChannel.addWidget(self.chkWireless)
+#		self.chkWireless = QCheckBox("Wireless On")
+#		self.chkWireless.stateChanged.connect(self.wireless_changed)
+#		self.layChannel.addWidget(self.chkWireless)
+		
+		self.swtWireless = QSwitch("Wireless On", SwitchSize.Small, SwitchLabelPos.Trailing)
+		self.swtWireless.checked.connect(self.wireless_checked)
+		self.layChannel.addWidget(self.swtWireless)
 		
 		self.gbSelection.layout().addWidget(self.widChannel)
 		
@@ -133,9 +144,20 @@ class TabGeneral(TabBase):
 		self.tblBasicInfos = BasicInfoTableWidget(None)
 		self.gbBasic.layout().addWidget(self.tblBasicInfos)
 		
-		print(f'usbmux_address: {usbmux_address}')
+#		print(f'usbmux_address: {usbmux_address}')
 		self.lockdownClient = usbmux_list(usbmux_address, True, True, False)
+#		self.loadData()
+		self.optBasicToggled(True)
 	
+	def wireless_checked(self, checked):
+#		print(f"CHECKED CHANGED: {checked}!!!!")
+		if self.lockdownClient is not None:
+			self.lockdownClient.set_value(checked, 'com.apple.mobile.wireless_lockdown', 'EnableWifiConnections')
+			self.updateStatusBar(f"WirelessOn changed to {checked}")
+		else:
+			self.updateStatusBar(f"WirelessOn switch to {checked} failed: No connection!")
+		pass
+		
 	def wireless_changed(self, state):
 		wirelessOn = (state == 2)
 		self.lockdownClient.set_value(wirelessOn, 'com.apple.mobile.wireless_lockdown', 'EnableWifiConnections')
@@ -143,19 +165,31 @@ class TabGeneral(TabBase):
 			
 	def loadData(self):
 		self.my_dict = {}
-		strWirelessOn = self.lockdownClient.get_value('com.apple.mobile.wireless_lockdown').get('EnableWifiConnections', False)
-		print(f'WirelessOn: {strWirelessOn}')
-		self.chkWireless.setChecked(strWirelessOn)
-		self.tblBasicInfos.loadBasicInfoFromLockdownClient(self.lockdownClient)
+		if self.lockdownClient is not None:
+			strWirelessOn = self.lockdownClient.get_value('com.apple.mobile.wireless_lockdown').get('EnableWifiConnections', False)
+	#		print(f'WirelessOn: {strWirelessOn}')
+			self.swtWireless.setChecked(strWirelessOn)
+	#		self.chkWireless.setChecked(strWirelessOn)
+			self.tblBasicInfos.loadBasicInfoFromLockdownClient(self.lockdownClient)
 		
 	def optBasicToggled(self, state):
 		QCoreApplication.processEvents()
 		if(state):
 			self.gbBasic.setTitle("Basic infos")
-			self.updateStatusBar("Loading basic device infos ...")
-			self.lockdownClient = usbmux_list("/var/run/usbmuxd", True, True, False)
+#			self.updateStatusBar("Loading basic device infos ...")
 			QCoreApplication.processEvents()
-			self.tblBasicInfos.loadBasicInfoFromLockdownClient(self.lockdownClient)
+#			self.lockdownClient = usbmux_list("/var/run/usbmuxd", True, True, False)
+#			QCoreApplication.processEvents()
+#			self.tblBasicInfos.loadBasicInfoFromLockdownClient(self.lockdownClient)
+			self.my_dict = {}
+			result, lockdown = lockdownForFirstDevice()
+			if result:
+				self.lockdownClient = lockdown
+				strWirelessOn = self.lockdownClient.get_value('com.apple.mobile.wireless_lockdown').get('EnableWifiConnections', False)
+		#		print(f'WirelessOn: {strWirelessOn}')
+				self.swtWireless.setChecked(strWirelessOn)
+				self.tblBasicInfos.loadBasicInfoFromLockdownClient(self.lockdownClient)
+				QCoreApplication.processEvents()
 		pass
 		
 	def optExtToggled(self, state):

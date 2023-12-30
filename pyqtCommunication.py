@@ -15,6 +15,8 @@ from socatListener import *
 from helper import pyqtIconHelper
 from pyqt import *
 
+from QSwitch import *
+
 class CommReceiver(QObject):
 	#	data_received = pyqtSignal(str)
 	interruptComm = pyqtSignal()
@@ -26,12 +28,12 @@ class CommWorkerSignals(QObject):
 	
 class CommWorker(QRunnable):
 	
-	mv_command = "sudo mv /var/run/usbmux_real /var/run/usbmux_real2"
-	mv_command_revert = "sudo mv /var/run/usbmux_real2 /var/run/usbmux_real"
+#	mv_command = "sudo mv /var/run/usbmux_real /var/run/usbmux_real2"
+#	mv_command_revert = "sudo mv /var/run/usbmux_real2 /var/run/usbmux_real"
 	
 	socat_command = [
 		"sudo", "socat",
-		"-t100", "-v", # "-x",
+		"-t100", "-v", "-x",
 		"UNIX-LISTEN:/var/run/usbmux_real,mode=777,reuseaddr,fork",
 		"UNIX-CONNECT:/var/run/usbmux_real2"
 	]
@@ -40,12 +42,12 @@ class CommWorker(QRunnable):
 		super(CommWorker, self).__init__()
 		
 		if True:
-			mv_command = "sudo mv /var/run/usbmux_real /var/run/usbmux_real2"
-			mv_command_revert = "sudo mv /var/run/usbmux_real2 /var/run/usbmux_real"
+#			mv_command = "sudo mv /var/run/usbmux_real /var/run/usbmux_real2"
+#			mv_command_revert = "sudo mv /var/run/usbmux_real2 /var/run/usbmux_real"
 			
 			socat_command = [
 				"sudo", "socat",
-				"-t100", "-v", # "-x",
+				"-t100", "-v", "-x",
 				"UNIX-LISTEN:/var/run/usbmux_real,mode=777,reuseaddr,fork",
 				"UNIX-CONNECT:/var/run/usbmux_real2"
 			]
@@ -65,11 +67,11 @@ class CommWorker(QRunnable):
 		self.runComm()
 		
 	def runComm(self):
-		try:
-			result, msg, stdout = self.runCommand(self.mv_command)
-			if result:
-				print(msg)
-				print(stdout)
+#		try:
+#			result, msg, stdout = self.runCommand(self.mv_command)
+#			if result:
+#				print(msg)
+#				print(stdout)
 				try:
 					# Start socat as a subprocess with stdout and stderr as pipes
 					self.proc = subprocess.Popen(self.socat_command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
@@ -86,14 +88,14 @@ class CommWorker(QRunnable):
 				except Exception as e:
 					print(f"Error: {e}")
 				finally:
-					resultRevert, msgRevert, stdoutRevert = self.runCommand(self.mv_command_revert)
+#					resultRevert, msgRevert, stdoutRevert = self.runCommand(self.mv_command_revert)
 					self.signals.finished.emit()
 					QCoreApplication.processEvents()
-			else:
-				print(msg)
-				print(stdout)
-		except Exception as e:
-			print(f"Error starting communication listener. Exception: {e}")
+#			else:
+#				print(msg)
+#				print(stdout)
+#		except Exception as e:
+#			print(f"Error starting communication listener. Exception: {e}")
 			
 	def runCommand(self, cmd):
 		try:
@@ -184,10 +186,14 @@ class TabCommunication(QWidget):
 		self.txtConsole.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
 		self.gbConsole.layout().addWidget(self.txtConsole)
 		
-		self.cmdStartListening = QPushButton("Start listening")
-		self.cmdStartListening.setToolTip("Start / Stop listening for communication with the connected idevice")
-		self.cmdStartListening.clicked.connect(self.cmdStartListening_clicked)
-		self.gbCtrl.layout().addWidget(self.cmdStartListening)
+#		self.cmdStartListening = QPushButton("Start listening")
+#		self.cmdStartListening.setToolTip("Start / Stop listening for communication with the connected idevice")
+#		self.cmdStartListening.clicked.connect(self.cmdStartListening_clicked)
+#		self.gbCtrl.layout().addWidget(self.cmdStartListening)
+		
+		self.swtListen = QSwitch("Listen communication", SwitchSize.Small, SwitchLabelPos.Above)
+		self.swtListen.checked.connect(self.listen_checked)
+		self.gbCtrl.layout().addWidget(self.swtListen)
 		
 		self.layout().addWidget(self.gbCtrl)
 		self.layout().addWidget(self.gbConsole)
@@ -219,6 +225,23 @@ class TabCommunication(QWidget):
 		
 		self.gbConsole.layout().addWidget(self.widCtrl)
 	
+	def listen_checked(self, checked):
+		if not checked:
+			QCoreApplication.processEvents()
+			print(f'self.window().comm_receiver: {self.window().comm_receiver}')
+			self.window().comm_receiver.interruptComm.emit()
+			self.addConsoleTxt("Communication listener stopped ...")
+#			self.cmdStartListening.setText("Start listening")
+			QCoreApplication.processEvents()
+			pass
+		else:
+			self.window().start_workerComm()
+			self.addConsoleTxt("Communication listener started ...")
+#			self.cmdStartListening.setText("Stop listening")
+			QCoreApplication.processEvents()
+			pass#		self.updateStatusBar(f"WirelessOn changed to {checked}")
+		pass
+		
 	def commAutoScroll_changed(self, state):
 		autoScrollComm = (state == 2)
 		

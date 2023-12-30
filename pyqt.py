@@ -1,6 +1,10 @@
 """PyMobiledevice3GUI is a simple calculator built with Python and PyQt."""
 
 import sys
+
+python_helper_dir = "/Volumes/Data/dev/python/helper/ch.kimhauser.python.helper/PyQt6/"
+sys.path.append(python_helper_dir)
+
 import os
 
 from threading import Timer
@@ -28,16 +32,22 @@ from PyQt6.QtGui import *
 from PyQt6.QtCore import *
 
 from PyQt6.QtWidgets import *
+from PyQt6 import uic, QtWidgets
+
+from pyqtDeviceHelper import *
 
 from pyqtGeneral import *
 from pyqtAFC import *
-from pyqtDiagnostics import *
+#from pyqtDiagnostics import *
+from pyqtDiagnosticsNG import *
 from pyqtSysLog import *
 from pyqtTunnel import *
 from pyqtCommunication import *
-from pyqtTabBase import *
-
+#from pyqtTabBase import *
+from pyqtPCap import *
 from helper import *
+from pyqtSettings import *
+from SettingsDialog import *
 
 DEV_MODE = True
 #ERROR_MSG = "ERROR"
@@ -47,7 +57,7 @@ WINDOW_SIZE = 620
 
 #AFCMAGIC = b'CFA6LPAA'
 
-usbmux_address = None
+usbmux_address = '/var/run/usbmuxd' # _mysocket
 
 pymobiledevice3GUIApp = None
 pymobiledevice3GUIWindow = None
@@ -56,27 +66,49 @@ def create_mux(usbmux_address: Optional[str] = None) -> usbmux.MuxConnection:
     return usbmux.MuxConnection.create(usbmux_address=usbmux_address)
 
 def list_devices(usbmux_address: Optional[str] = None) -> List[usbmux.MuxDevice]:
-    mux = create_mux(usbmux_address=usbmux_address)
-    mux.get_device_list(0.1)
-    devices = mux.devices
-    mux.close()
-    return devices
+    try:
+        mux = create_mux(usbmux_address=usbmux_address)
+        mux.get_device_list(0.1)
+        devices = mux.devices
+        mux.close()
+        return devices
+    except Exception as e:
+        print(f"Error: {e}")
+    return []
 
 class Pymobiledevice3GUIWindow(QMainWindow):
     """PyMobiledevice3GUI's main window (GUI or view)."""
 
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("pymd3GUI - GUI for pymobiledevice3")
+        self.setWindowTitle(APP_NAME)
         self.setBaseSize(WINDOW_SIZE * 2, WINDOW_SIZE)
 #       self.setBaseSize(<#s#>)
+
+        self.initUI()
+#       # Create the menu
+#       self.menubar = QtWidgets.QMenuBar()
+#       self.setMenuBar(self.menubar)
+#       
+#       # Create the file menu
+#       self.file_menu = QtWidgets.QMenu('File', self.menubar)
+#       self.menubar.addMenu(self.file_menu)
+#       
+#       # Create the exit action
+#       self.exit_action = QAction('Exit', self)
+##       self.exit_action.setShortcut('Ctrl+Q')
+#       self.exit_action.triggered.connect(self.quit)
+#       
+#       # Add the exit action to the file menu
+#       self.file_menu.addAction(self.exit_action)
         
-        self._createMenuBar()
-        self._createToolBars()
+#       self._createMenuBar()
+#       self._createToolBars()
         
         self.inputDialog = None # InputDialog("Enter folder name", "Please enter a name for the new folder", self.inputCallback)
         self.mlDialog = None # MultilineTextDialog("File content", "", "", "", self.inputCallback)
         self.fileContentDialog = None # FileContentDialog("File content", "", bytes(0), "", self.inputCallback)
+        self.settingsDialog = None
         
 #       self.showEvent(<#a0#>) .connect(self, Qt.SIGNAL('showEvent(QShowEvent*)'), self.onWindowShown)
 #       self.connect(self, Qt.SIGNAL('loadFinished(bool)'), self.onLoadFinished)
@@ -120,7 +152,7 @@ class Pymobiledevice3GUIWindow(QMainWindow):
         
         self.lblAddress = QLabel("Usbmuxd Address:")
         self.lblAddress.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Maximum)
-        self.txtAddress = QLineEdit("/var/run/usbmuxd")
+        self.txtAddress = QLineEdit("/var/run/usbmuxd") # _mysocket
         self.txtAddress.setReadOnly(True)
         self.txtAddress.setAttribute(Qt.WidgetAttribute.WA_MacShowFocusRect, 0)
         self.txtAddress.setToolTip("Specify a usbmuxd address")
@@ -149,12 +181,14 @@ class Pymobiledevice3GUIWindow(QMainWindow):
         self.gbDevices.layout().addWidget(self.optNet)
         
         self.generalLayout = QVBoxLayout()
-        self.buttonMap = QPushButton("TeSet")
+        self.buttonMap = QPushButton("Settings")
+        self.buttonMap.clicked.connect(self.dialog)
+        self.gbDevices.layout().addWidget(self.buttonMap)
         
         self.tabGeneral = TabGeneral()
         self.tabWidget.addTab(self.tabGeneral, "General")
         
-        self.tabDiagnostics = TabDiagnostics()
+        self.tabDiagnostics = TabDiagnosticsNG()
         self.tabWidget.addTab(self.tabDiagnostics, "Diagnostics")
 
         self.tabAFC = TabAFC()
@@ -169,8 +203,12 @@ class Pymobiledevice3GUIWindow(QMainWindow):
         self.tabCommunication = TabCommunication()
         self.tabWidget.addTab(self.tabCommunication, "Communication")
         
-        self.tabPcap = TabLogBase()
+        self.tabPcap = TabPCap()
         self.tabWidget.addTab(self.tabPcap, "PCap")
+        
+#       def clear_clicked(self):
+#           self.txtConsole.clear()
+#           super(TimestampLogger, self).log(message)
         
         self.topLayout.addWidget(self.gbDevices)
 
@@ -197,6 +235,7 @@ class Pymobiledevice3GUIWindow(QMainWindow):
         self.afc_receiver = AFCReceiver()
         self.general_receiver = GeneralReceiver()
         self.comm_receiver = CommReceiver()
+        self.pcap_receiver = PCapReceiver()
         
         self.threadpool = QThreadPool()
         
@@ -206,6 +245,68 @@ class Pymobiledevice3GUIWindow(QMainWindow):
         
         self.updateStatusBar("Ready ...")
     
+    def initUI(self):
+        menubar = self.menuBar()
+        
+        menubar.setNativeMenuBar(True)
+        # File menu
+        fileMenu = menubar.addMenu('File')
+        
+        newAction = QAction('New', self)
+        fileMenu.addAction(newAction)
+        
+        fileMenu.addSeparator()
+        fileMenu.addAction(QAction("Settings ...", self))
+        settingsMenu = fileMenu.addMenu(IconHelper.getRefreshIcon(), "Add Menu")
+        settingsAction = QAction("Settings ...", self)
+        settingsAction.triggered.connect(self.dialog)
+        settingsMenu.addAction(settingsAction)
+        settingsAction = QAction('Settings', self)
+        settingsAction.triggered.connect(self.close)
+        fileMenu.addAction(settingsAction)
+        
+        fileMenu.addSeparator()
+        
+        openAction = QAction('Open', self)
+        fileMenu.addAction(openAction)
+        
+        fileMenu.addSeparator()
+        
+        saveAction = QAction('Save', self)
+        fileMenu.addAction(saveAction)
+        
+        fileMenu.addSeparator()
+        
+#       settingsAction = QAction('Settings', self)
+#       settingsAction.triggered.connect(self.close)
+#       fileMenu.addAction(settingsAction)
+#       
+#       fileMenu.addSeparator()
+        
+        
+        exitAction = QAction('Exit', self)
+        exitAction.triggered.connect(close_application)
+        fileMenu.addAction(exitAction)
+        
+#       fileMenu.addAction(exitAction)
+#       exitAction.setMenu(fileMenu)
+#       fileMenu.act
+        
+        # Edit menu
+        editMenu = menubar.addMenu('Edit')
+        
+        cutAction = QAction('Cut', self)
+        editMenu.addAction(cutAction)
+        
+        copyAction = QAction('Copy', self)
+        editMenu.addAction(copyAction)
+        
+        pasteAction = QAction('Paste', self)
+        editMenu.addAction(pasteAction)
+        
+    def quit(self):
+        pass
+        
     def loadDevices(self):
         self.updateStatusBar("Reloading devices ...")
         self.cmbDevices.clear()
@@ -236,6 +337,15 @@ class Pymobiledevice3GUIWindow(QMainWindow):
         
     # Snip...
     def _createMenuBar(self):
+        
+#       #   Create the menu
+#       self.menubar = QMenuBar()
+#       self.setMenuBar(self.menubar)
+#   
+#       # Create the file menu
+#       self.file_menu = QtWidgets.QMenu('File', self.menubar)
+#       self.menubar.addMenu(self.file_menu)
+            
         menuBar = self.menuBar()
         # Creating menus using a QMenu object
         fileMenu = QMenu("&File", self)
@@ -294,6 +404,17 @@ class Pymobiledevice3GUIWindow(QMainWindow):
         
         QCoreApplication.processEvents()
         
+    def start_workerPCap(self):
+        self.updateStatusBar("Starting pcap capturing ...")
+        workerPCap = PCapWorker(self.pcap_receiver)
+        workerPCap.signals.sendPCap.connect(self.handle_sendPcapLog)
+#       workerAFC.treeWidget = self.tree_widget
+#       workerPCap.signals.sendProgressUpdate.connect(self.handle_progressUpdate)
+#       workerPCap.signals.finished.connect(self.handle_progressFinished)
+        self.threadpool.start(workerPCap)
+        
+        QCoreApplication.processEvents()
+        
     def handle_sendComm(self, text):
         if text[0] == "<":
             self.tabCommunication.txtConsole.setTextColor(QColor("green"))
@@ -337,6 +458,9 @@ class Pymobiledevice3GUIWindow(QMainWindow):
         
     def handle_sendSysLog(self, text, color):
         self.tabSysLog.textLog.append(text, color)
+        
+    def handle_sendPcapLog(self, text, color):
+        self.tabPcap.txtConsole.append(text, color)
 
     def updateStatusBar(self, msg):
         self.statusBar.showMessage(msg)
@@ -344,8 +468,36 @@ class Pymobiledevice3GUIWindow(QMainWindow):
         
     def getDeviceAddress(self) -> str:
         return self.cmbDevices.currentText()
+    
+#   self.btn_close.clicked.connect(self.dialog)
+    
+    def dialog(self):
+        dialog = QDialogClass()
+        dialog.exec()
+            
+    def pref_clicked(self):
+        self.window().window = uic.loadUi("pyqtSettings.ui")
+        self.window().window.show()
+        
+#       self.window().settingsDialog = SettingsDialog()
+#       
+#       self.window().settingsDialog.setModal(True)
+#       self.window().settingsDialog.show()
+##       ui_file = QFile("pyqtSettings.ui")
+##       ui_file.open(QFile.ReadOnly)
+##       
+##       loader = QUiLoader()
+##       window = loader.load(ui_file)
+##       window.show()
+        pass
 
+TestQDialog = uic.loadUiType("pyqtSettings.ui")[0]
 
+class QDialogClass(QtWidgets.QDialog, TestQDialog):
+    def __init__(self, parent=None):
+        QtWidgets.QDialog.__init__(self, parent)
+        self.setupUi(self)
+        
 class PyMobiledevice3GUI:
     """PyMobiledevice3GUI's controller class."""
 
@@ -372,7 +524,36 @@ def main():
     pymobiledevice3GUIWindow = Pymobiledevice3GUIWindow()
     pymobiledevice3GUIWindow.show()
     PyMobiledevice3GUI(view=pymobiledevice3GUIWindow)
-
+    pymobiledevice3GUIApp.setQuitOnLastWindowClosed(True)
+    
+    # Create the icon
+#   icon = QIcon("icon.png")
+    
+#   # Create the tray
+#   tray = QSystemTrayIcon()
+#   tray.setIcon(IconHelper.iconApp)
+#   tray.setVisible(True)
+#   
+#   # Create the menu
+#   menu = QMenu()
+#   action = QAction("A menu item")
+#   menu.addAction(action)
+#   
+#   # Add a Quit option to the menu.
+#   quit = QAction("Quit")
+#   quit.triggered.connect(pymobiledevice3GUIApp.quit)
+#   menu.addAction(quit)
+#   
+#   # Add the menu to the tray
+#   tray.setContextMenu(menu)
+#   
+#   menubar = QMenuBar()
+#   pymobiledevice3GUIWindow.setMenuBar(menubar)
+#   
+#   # Create the file menu
+#   file_menu = QtWidgets.QMenu('File', menubar)
+#   menubar.addMenu(file_menu)
+    
     sys.exit(pymobiledevice3GUIApp.exec())
 
 

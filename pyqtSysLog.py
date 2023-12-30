@@ -11,16 +11,18 @@ from PyQt6.QtWidgets import *
 
 from pyqtDeviceHelper import *
 from helper import pyqtIconHelper
+from pyqtTabBase import *
 
 usbmux_address = None
 
 autoScrollSysLog = True
 
 class MyComboBoxStyle(QStyle):
-	
-	def drawFocus(self, painter, option, rect):
-		# Disable focus rectangle
-		painter.setBrush(Qt.BrushStyle.NoBrush)
+	pass
+#	def drawFocus(self, painter, option, rect):
+#		# Disable focus rectangle
+##		painter.setBrush(Qt.BrushStyle.NoBrush)
+#		pass
 		
 def processes_ps(service_provider: LockdownClient):
 	""" show process list """
@@ -69,39 +71,39 @@ class SysLogWorker(QRunnable):
 #		print(f"Received interrupt in the sysLog worker thread")
 		self.isSysLogActive = False
 
-class MyComboBoxStyledItemDelegate(QStyledItemDelegate):
-	
-	def paint(self, painter, option, index):
-		print("paint ...")
-		# Check if the item is focused
-		if option.state & QStyle.StateFlag.State_HasFocus:
-			# Disable focus rectangle
-			print("Has focus ...")
-			painter.setBrush(Qt.BrushStyle.NoBrush)
-			
-		# Otherwise, use the default paint method
-		super().paint(painter, option, index)
+#class MyComboBoxStyledItemDelegate(QStyledItemDelegate):
+#	
+#	def paint(self, painter, option, index):
+#		print("paint ...")
+#		# Check if the item is focused
+#		if option.state & QStyle.StateFlag.State_HasFocus:
+#			# Disable focus rectangle
+#			print("Has focus ...")
+#			painter.setBrush(Qt.BrushStyle.NoBrush)
+#			
+#		# Otherwise, use the default paint method
+#		super().paint(painter, option, index)
 		
-class LogginOutput(QTextEdit):
-	
-	def __init__(self, parent=None):
-		super(LogginOutput, self).__init__(parent)
-		self.setReadOnly(True)
-		# self.setLineWrapMode(self.NoWrap)
-		self.insertPlainText("")
-		self.doAutoScroll = True
-		self.sb = self.verticalScrollBar()
-		
-	@pyqtSlot(bool)
-	def updateAutoScroll(self, doAutoScroll):
-		self.doAutoScroll = doAutoScroll
-		
-	@pyqtSlot(str, str)
-	def append(self, text, color):
-		self.setTextColor(QColor(color))
-		self.insertPlainText(text)
-		if self.doAutoScroll:
-			self.sb.setValue(self.sb.maximum())
+#class LoggingOutput(QTextEdit):
+#	
+#	def __init__(self, parent=None):
+#		super(LoggingOutput, self).__init__(parent)
+#		self.setReadOnly(True)
+#		# self.setLineWrapMode(self.NoWrap)
+#		self.insertPlainText("")
+#		self.doAutoScroll = True
+#		self.sb = self.verticalScrollBar()
+#		
+#	@pyqtSlot(bool)
+#	def updateAutoScroll(self, doAutoScroll):
+#		self.doAutoScroll = doAutoScroll
+#		
+#	@pyqtSlot(str, str)
+#	def append(self, text, color):
+#		self.setTextColor(QColor(color))
+#		self.insertPlainText(text)
+#		if self.doAutoScroll:
+#			self.sb.setValue(self.sb.maximum())
 			
 class TabSysLog(QWidget):
 	
@@ -160,7 +162,7 @@ class TabSysLog(QWidget):
 		else:
 			print("No device detected!")
 				
-		self.textLog = LogginOutput(parent)
+		self.textLog = LoggingOutput(parent)
 		self.setLayout(QVBoxLayout())
 		self.gbFilter.layout().addWidget(self.lblPidFiler)
 		self.gbFilter.layout().addWidget(self.cmbPid)
