@@ -20,6 +20,9 @@ class BasicInfoTableModel(QAbstractTableModel):
 		else:
 #			lockdownClient.developer_mode_status
 			self.input_keys = list(lockdownClient.short_info.keys())
+			
+#			print(self.input_keys.index("DeviceName"))
+			
 			self.input_keys.append("developer_mode_status")
 			self.input_keys.append("board_id")
 			self.input_keys.append("chip_id")
@@ -46,13 +49,24 @@ class BasicInfoTableModel(QAbstractTableModel):
 			self.input_keys.append("wifi_mac_address")
 			
 			self.input_values = list(lockdownClient.short_info.values())
-			self.input_values.append(str(lockdownClient.developer_mode_status))
+			
+			self.input_values[self.input_keys.index("DeviceName")] = self.lockdownClient.get_value(key='DeviceName')
+			
+#			print(self.input_values)
+			try:
+				if lockdownClient.developer_mode_status != None:
+					self.input_values.append(str(lockdownClient.developer_mode_status))
+			except Exception as e:
+				print(f'Cannot get lockdownClient.developer_mode_status: Exception: {e}')
+				pass
+				
 			self.input_values.append(str(lockdownClient.board_id))
 			self.input_values.append(str(lockdownClient.chip_id))
 			self.input_values.append(str(lockdownClient.unique_chip_id))
 			self.input_values.append(str(lockdownClient.product_version))
 			self.input_values.append(str(lockdownClient.date))
 			self.input_values.append(str(lockdownClient.device_class))
+#			print(f"loading display name: {str(lockdownClient.display_name)}")
 			self.input_values.append(str(lockdownClient.display_name))
 			self.input_values.append(str(lockdownClient.ecid))
 			self.input_values.append(str(lockdownClient.device_public_key))

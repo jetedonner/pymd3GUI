@@ -131,10 +131,21 @@ class TabGeneral(TabBase):
 		
 		self.gbSelection.layout().addWidget(self.widChannel)
 		
-		self.refreshButton = QPushButton("Reload Infos")
-		self.refreshButton.clicked.connect(self.refreshInfos)
-		self.gbSelection.layout().addWidget(self.refreshButton)
-			
+#		self.refreshButton = QPushButton("Reload Infos")
+#		self.refreshButton.clicked.connect(self.refreshInfos)
+#		self.gbSelection.layout().addWidget(self.refreshButton)
+		
+		self.lblDeviceName = QLabel("Name:")
+		self.lblDeviceName.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Maximum)
+		self.gbSelection.layout().addWidget(self.lblDeviceName)
+		self.txtDeviceName = QLineEdit("") # _mysocket
+		self.gbSelection.layout().addWidget(self.txtDeviceName)
+		
+		self.cmdUpdateName = QPushButton("Update name")
+		self.cmdUpdateName.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Maximum)
+		self.cmdUpdateName.clicked.connect(self.updateName)
+		self.gbSelection.layout().addWidget(self.cmdUpdateName)
+		
 		self.gbBasic = QGroupBox("Basic Infos")
 		self.gbBasic.setLayout(QHBoxLayout())
 		self.gbBasic.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Minimum)		
@@ -163,9 +174,14 @@ class TabGeneral(TabBase):
 		self.lockdownClient.set_value(wirelessOn, 'com.apple.mobile.wireless_lockdown', 'EnableWifiConnections')
 		self.updateStatusBar(f"WirelessOn changed to {wirelessOn}")
 			
-	def loadData(self):
+	def loadData(self, loadDeviceName=True):
 		self.my_dict = {}
+#		print("LOAD DATA")
 		if self.lockdownClient is not None:
+#			print(self.lockdownClient.get_value(key='DeviceName'))
+			if loadDeviceName:
+				self.txtDeviceName.setText(self.lockdownClient.get_value(key='DeviceName'))
+				
 			strWirelessOn = self.lockdownClient.get_value('com.apple.mobile.wireless_lockdown').get('EnableWifiConnections', False)
 	#		print(f'WirelessOn: {strWirelessOn}')
 			self.swtWireless.setChecked(strWirelessOn)
@@ -208,5 +224,14 @@ class TabGeneral(TabBase):
 
 
 	def refreshInfos(self):
+		pass
+		
+	def updateName(self):
+		if self.lockdownClient is not None:
+			if self.txtDeviceName.text() != "":
+				self.lockdownClient.set_value(self.txtDeviceName.text(), key='DeviceName')
+				self.loadData(False)
+			else:
+				self.updateStatusBar("Please enter a valid name!")
 		pass
 		

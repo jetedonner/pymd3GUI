@@ -101,9 +101,18 @@ class USBMuxdProxy:
 		loop.close()
 		
 	def handle_client(self):
+		data = b''
 		while True:
 			try:
-				data = self.client.recv(1024)
+				tmpData = self.client.recv(1024)
+				if not tmpData.endswith(b'\n'):
+#					print(f'tmpData: {tmpData}')
+					data += tmpData
+					continue
+				else:
+					data = tmpData
+#					print("ENDS WITH LF ONLY")
+#					data = data.replace(b'\n', b'\r\n')
 #				if data.endswith(b'\r\n'):
 #					print("ENDS WITH CRLF")
 #				elif data.endswith(b'\n'):
@@ -122,6 +131,7 @@ class USBMuxdProxy:
 					continue
 				
 				self.real_usbmuxd.sendall(data)
+				data = b''
 			except Exception as e:
 				log.error("Failed to read data from real USBMuxd daemon (handle_client):", e)
 				continue
@@ -132,9 +142,17 @@ class USBMuxdProxy:
 		self.client_thread = None
 		
 	def read_real_usbmuxd_data(self):
+		data = b''
 		while True:
 			try:
-				data = self.real_usbmuxd.recv(1024)
+#				data = self.real_usbmuxd.recv(1024)
+				tmpData = self.real_usbmuxd.recv(1024)
+				if not tmpData.endswith(b'\n'):
+#					pr()int(f'tmpData: {tmpData}')
+					data += tmpData
+					continue
+				else:
+					data = tmpData
 #				if data.endswith(b'\r\n'):
 #					print("ENDS WITH CRLF")
 #				elif data.endswith(b'\n'):
@@ -153,6 +171,7 @@ class USBMuxdProxy:
 					continue
 				
 				self.client.sendall(data)
+				data = b''
 			except Exception as e:
 				log.error("Failed to read data from real USBMuxd daemon (read_real_usbmuxd_data):", e)
 				continue

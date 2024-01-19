@@ -298,11 +298,11 @@ class AFCTreeWidget(QTreeWidget):
 	def actionPushFile_triggered(self):
 		selected_item = self.getFirstSelectedItem()
 		if selected_item:
-			pathToLocalFiles = QFileDialog.getExistingDirectory(None, "Open Directory", "~/") # QFileDialog.Option.ShowDirsOnly
+#			pathToLocalFiles = QFileDialog.getExistingDirectory(None, "Open Directory", "~/") # QFileDialog.Option.ShowDirsOnly
 								
-#			pathToLocalFiles = QFileDialog.getOpenFileNames(None, "Select file(s) to push", "~/", "", "")
-#			print(pathToLocalFiles)
-			if len(pathToLocalFiles[0]) > 0:
+			pathToLocalFiles = QFileDialog.getOpenFileNames(None, "Select file(s) to push", "~/", "", "")
+			print(pathToLocalFiles)
+			if len(pathToLocalFiles) > 0 and len(pathToLocalFiles[0]) > 0:
 #				lockdown = create_using_usbmux(usbmux_address=usbmux_address)
 				result, lockdown = lockdownForFirstDevice()
 				if result:

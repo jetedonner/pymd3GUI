@@ -58,6 +58,7 @@ class BasicInfoTableWidget(QWidget):
 #		self.table_view.setItemDelegate(SelectableItemDelegate(self.table_view))
 	
 	def loadBasicInfoFromLockdownClient(self, lockdownClient:LockdownClient):
+#		print("loadBasicInfoFromLockdownClient")
 		self.model = BasicInfoTableModel(lockdownClient)
 		self.table_view.setModel(self.model)
 		

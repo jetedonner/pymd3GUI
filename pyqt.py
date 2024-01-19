@@ -2,6 +2,8 @@
 
 import sys
 
+print(sys.version)
+
 python_helper_dir = "/Volumes/Data/dev/python/helper/ch.kimhauser.python.helper/PyQt6/"
 sys.path.append(python_helper_dir)
 
@@ -55,6 +57,8 @@ WINDOW_SIZE = 620
 #DISPLAY_HEIGHT = 35
 #BUTTON_SIZE = 40
 
+APP_VERSION = "v0.0.1"
+
 #AFCMAGIC = b'CFA6LPAA'
 
 usbmux_address = '/var/run/usbmuxd' # _mysocket
@@ -81,7 +85,7 @@ class Pymobiledevice3GUIWindow(QMainWindow):
 
     def __init__(self):
         super().__init__()
-        self.setWindowTitle(APP_NAME)
+        self.setWindowTitle(APP_NAME + " " + APP_VERSION)
         self.setBaseSize(WINDOW_SIZE * 2, WINDOW_SIZE)
 #       self.setBaseSize(<#s#>)
 

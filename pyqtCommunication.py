@@ -41,11 +41,11 @@ class CommWorker(QRunnable):
 	def __init__(self, data_receiver):
 		super(CommWorker, self).__init__()
 		
-		if True:
+#		if True:
 #			mv_command = "sudo mv /var/run/usbmux_real /var/run/usbmux_real2"
 #			mv_command_revert = "sudo mv /var/run/usbmux_real2 /var/run/usbmux_real"
 			
-			socat_command = [
+		self.socat_command = [
 				"sudo", "socat",
 				"-t100", "-v", "-x",
 				"UNIX-LISTEN:/var/run/usbmux_real,mode=777,reuseaddr,fork",
